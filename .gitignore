@@ -177,3 +177,11 @@ src/result-*.txt
 
 # Tool files
 tools/repository_bumper_*
+
+# Local generated artifacts and dependencies
+node_modules/
+dist/
+artifacts/
+cache/
+frontend/node_modules/
+frontend/.env
