@@ -260,7 +260,7 @@ tr:last-child td { border-bottom: none; }
 }
 .ring-label span { font-size: 20px; font-weight: 700; }
 .ring-label small { font-size: 9px; color: var(--text-muted); }
-.ip-sources-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.ip-sources-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .ip-source-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px;
@@ -362,3 +362,111 @@ tr:last-child td { border-bottom: none; }
   .audit-stats { grid-template-columns: 1fr; }
   .filter-bar { flex-direction: column; }
 }
+
+/* ── Services View ──────────────────────────────────────────── */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.service-card { padding: 18px; }
+.service-header {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 16px;
+}
+.service-icon { font-size: 28px; flex-shrink: 0; }
+.service-info { flex: 1; }
+.service-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.service-subtitle { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 2px; }
+
+/* Service status badges */
+.service-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+}
+.badge-online {
+  background: rgba(0,255,157,0.12); color: var(--green);
+  border: 1px solid rgba(0,255,157,0.35);
+  box-shadow: 0 0 8px rgba(0,255,157,0.15);
+}
+.badge-offline {
+  background: rgba(255,58,92,0.12); color: var(--red);
+  border: 1px solid rgba(255,58,92,0.3);
+}
+
+/* Service detail rows */
+.service-details { display: flex; flex-direction: column; gap: 8px; }
+.svc-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; padding: 6px 10px;
+  background: rgba(255,255,255,0.03); border-radius: 6px;
+}
+.svc-row span:first-child { color: var(--text-secondary); }
+.svc-row span:last-child { color: var(--text-primary); font-family: var(--mono); font-weight: 500; }
+
+/* ── Installer Card ─────────────────────────────────────────── */
+.installer-card { margin-top: 0; }
+.installer-body {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 28px;
+  align-items: start;
+}
+.installer-version {
+  font-size: 11px; font-family: var(--mono);
+  color: var(--cyan); background: var(--cyan-dim);
+  border: 1px solid rgba(0,212,255,0.2);
+  display: inline-block; padding: 3px 10px;
+  border-radius: 20px; margin-bottom: 12px;
+}
+.installer-desc {
+  font-size: 13px; color: var(--text-secondary);
+  line-height: 1.6; margin-bottom: 16px;
+}
+.installer-features {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.feature-chip {
+  background: rgba(0,255,157,0.08);
+  border: 1px solid rgba(0,255,157,0.2);
+  color: var(--green); font-size: 11px;
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* Command blocks */
+.installer-actions { display: flex; flex-direction: column; gap: 14px; }
+.installer-cmd {}
+.cmd-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+.cmd-block {
+  display: block; padding: 10px 14px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+  cursor: text; user-select: all;
+}
+.cmd-block:hover { border-color: var(--border-glow); background: rgba(0,212,255,0.04); }
+.installer-build-note {
+  font-size: 12px; color: var(--text-secondary);
+  background: rgba(255,215,0,0.05);
+  border: 1px solid rgba(255,215,0,0.15);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.installer-build-note code {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--yellow);
+}
+.build-icon { margin-right: 6px; }
+
+@media (max-width: 900px) {
+  .installer-body { grid-template-columns: 1fr; }
+}
+

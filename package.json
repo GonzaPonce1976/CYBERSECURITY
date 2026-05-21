@@ -1,0 +1,45 @@
+{
+  "name": "cybersecurity-dapp",
+  "version": "0.1.0",
+  "description": "CyberSecurity DApp — Wazuh SIEM + Rust Gateway + Ethereum Blockchain",
+  "private": true,
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "dev:frontend": "vite --config vite.config.js",
+    "dev:contracts": "hardhat node --config hardhat.config.cjs",
+    "dev:gateway": "cd rust-gateway && cargo run",
+    "build:frontend": "vite build --config vite.config.js",
+    "build:gateway": "cd rust-gateway && cargo build --release",
+    "test": "npm run test:contracts",
+    "test:contracts": "hardhat test --config hardhat.config.cjs",
+    "test:gateway": "cd rust-gateway && cargo test",
+    "compile": "hardhat compile --config hardhat.config.cjs",
+    "clean": "hardhat clean --config hardhat.config.cjs",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost --config hardhat.config.cjs",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia --config hardhat.config.cjs",
+    "verify:contracts": "hardhat run scripts/deploy.js --network sepolia --config hardhat.config.cjs",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "docker:build": "docker compose -f docker/docker-compose.yml build"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.2",
+    "@nomicfoundation/hardhat-ethers": "^3.1.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^2.0.0",
+    "@nomicfoundation/hardhat-viem": "^1.0.0",
+    "chai": "^6.2.2",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.11.0",
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "d3": "^7.9.0",
+    "ethers": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "type": "module"
+}

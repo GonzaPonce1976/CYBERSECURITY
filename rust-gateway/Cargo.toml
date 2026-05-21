@@ -1,0 +1,80 @@
+[package]
+name = "cybersec-gateway"
+version = "0.1.0"
+edition = "2021"
+description = "CyberSecurity DApp — Rust API Gateway: Wazuh SIEM + Multi-API Threat Intelligence Aggregator"
+authors = ["CyberSec DApp"]
+
+[[bin]]
+name = "cybersec-gateway"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["ws", "macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client (APIs externas)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Serialización JSON
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Variables de entorno
+dotenvy = "0.15"
+
+# Logging y tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Cache thread-safe in-memory
+dashmap = "6"
+
+# Fecha y hora
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUIDs para identificadores de eventos
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Base64 para encoding de tokens JWT de Wazuh
+base64 = "0.22"
+
+# Base de datos SQLite con pool de conexiones
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# SHA256 para hashing de eventos antes de ir a blockchain
+sha2 = "0.10"
+
+# Blockchain (alloy-rs — sucesor oficial de ethers-rs)
+alloy = { version = "2.0.4", features = [
+  "contract",
+  "providers",
+  "signers",
+  "rpc-types",
+] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+axum-test = "18"
+mockall = "0.13"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

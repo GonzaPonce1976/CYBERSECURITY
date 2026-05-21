@@ -1,0 +1,12 @@
+# Cargo config para el proyecto CyberSecurity DApp
+# Este archivo configura el linker correcto para Windows
+
+[build]
+# Usar el linker MSVC si está disponible
+# Si no tienes VS Build Tools, instálalos desde:
+# https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+# Para desarrollo en Windows sin VS Build Tools, 
+# instala MinGW64 y descomenta la línea de abajo:
+# [target.x86_64-pc-windows-gnu]
+# linker = "C:\\msys64\\mingw64\\bin\\gcc.exe"

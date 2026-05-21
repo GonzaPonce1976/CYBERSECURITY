@@ -78,6 +78,12 @@ src/wazuh-manager-remoted
 
 # Active responses
 src/firewall-drop
+
+# Windows gateway packaging artifacts
+/packages/windows/*.wixobj
+/packages/windows/*.cab
+/packages/windows/*.msi
+/packages/windows/*.log
 src/default-firewall-drop
 src/pf
 src/npf
@@ -185,3 +191,12 @@ artifacts/
 cache/
 frontend/node_modules/
 frontend/.env
+
+# Rust gateway build and cache artifacts
+rust-gateway/target/
+rust-gateway/target2/
+rust-gateway/gateway_data.db
+rust-gateway/*.pdb
+rust-gateway/**/*.rmeta
+rust-gateway/**/*.rlib
+rust-gateway/**/*.d

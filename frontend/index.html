@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="CyberSecurity DApp — Plataforma de inteligencia de amenazas descentralizada con Wazuh SIEM, Rust Gateway y Ethereum" />
+    <title>🔐 CyberSec DApp — Threat Intelligence Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- NAVBAR -->
+      <header class="navbar" id="navbar">
+        <div class="navbar-brand">
+          <span class="brand-icon">🔐</span>
+          <span class="brand-name">CyberSec<span class="brand-accent">DApp</span></span>
+          <span class="live-badge" id="live-badge">
+            <span class="pulse-dot"></span>LIVE
+          </span>
+        </div>
+        <nav class="navbar-nav">
+          <button class="nav-btn active" data-view="dashboard" id="nav-dashboard">Dashboard</button>
+          <button class="nav-btn" data-view="alerts" id="nav-alerts">Alertas</button>
+          <button class="nav-btn" data-view="ip" id="nav-ip">Reputación IP</button>
+          <button class="nav-btn" data-view="cve" id="nav-cve">CVE Lookup</button>
+          <button class="nav-btn" data-view="audit" id="nav-audit">Audit Trail</button>
+          <button class="nav-btn" data-view="servicios" id="nav-servicios">⚙ Servicios</button>
+        </nav>
+        <div class="navbar-actions">
+          <div class="gateway-status" id="gateway-status">
+            <span class="status-dot offline"></span>
+            <span class="status-text">Gateway</span>
+          </div>
+          <button class="btn-wallet" id="btn-wallet">
+            <span class="wallet-icon">⬡</span>
+            <span id="wallet-text">Conectar Wallet</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT -->
+      <main class="main-content" id="main-content">
+
+        <!-- ── DASHBOARD VIEW ─────────────────────────────────── -->
+        <div class="view active" id="view-dashboard">
+          <div class="view-header">
+            <h1 class="view-title">Threat Intelligence Dashboard</h1>
+            <div class="view-meta">
+              <span id="last-update">Actualizando...</span>
+              <button class="btn-refresh" id="btn-refresh" title="Refrescar datos">↻</button>
+            </div>
+          </div>
+
+          <!-- KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card" id="kpi-total">
+              <div class="kpi-icon">📊</div>
+              <div class="kpi-body">
+                <div class="kpi-value" id="kpi-total-value">—</div>
+                <div class="kpi-label">Total Alertas</div>
+              </div>
+              <div class="kpi-trend" id="kpi-total-trend"></div>
+            </div>
+            <div class="kpi-card critical" id="kpi-critical">
+              <div class="kpi-icon">🚨</div>
+              <div class="kpi-body">
+                <div class="kpi-value" id="kpi-critical-value">—</div>
+                <div class="kpi-label">Críticas</div>
+              </div>
+            </div>
+            <div class="kpi-card high" id="kpi-high">
+              <div class="kpi-icon">⚠️</div>
+              <div class="kpi-body">
+                <div class="kpi-value" id="kpi-high-value">—</div>
+                <div class="kpi-label">Altas</div>
+              </div>
+            </div>
+            <div class="kpi-card info" id="kpi-onchain">
+              <div class="kpi-icon">⛓️</div>
+              <div class="kpi-body">
+                <div class="kpi-value" id="kpi-onchain-value">—</div>
+                <div class="kpi-label">On-Chain</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts + Recent Alerts -->
+          <div class="dashboard-grid">
+            <!-- Severity Chart -->
+            <div class="card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">Distribución por Severidad</h2>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="severity-chart"></canvas>
+                <div class="chart-legend" id="chart-legend"></div>
+              </div>
+            </div>
+
+            <!-- Timeline Chart -->
+            <div class="card chart-card wide">
+              <div class="card-header">
+                <h2 class="card-title">Alertas en el Tiempo</h2>
+                <div class="chart-controls">
+                  <button class="chip active" data-period="1h">1H</button>
+                  <button class="chip" data-period="6h">6H</button>
+                  <button class="chip" data-period="24h">24H</button>
+                </div>
+              </div>
+              <div class="chart-wrapper tall">
+                <canvas id="timeline-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Recent Alerts Table -->
+            <div class="card table-card wide">
+              <div class="card-header">
+                <h2 class="card-title">Alertas Recientes</h2>
+                <span class="badge-count" id="alerts-count-badge">0</span>
+              </div>
+              <div class="table-container" id="recent-alerts-table">
+                <div class="empty-state">
+                  <div class="empty-icon">🛡️</div>
+                  <p>Conectando con el Gateway...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- MITRE ATT&CK Tags -->
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">MITRE ATT&CK Detectadas</h2>
+              </div>
+              <div class="tags-cloud" id="mitre-tags"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ALERTS VIEW ──────────────────────────────────────── -->
+        <div class="view" id="view-alerts">
+          <div class="view-header">
+            <h1 class="view-title">Centro de Alertas</h1>
+            <div class="filter-bar">
+              <select id="filter-severity" class="filter-select">
+                <option value="">Todas las severidades</option>
+                <option value="CRITICAL">Crítica</option>
+                <option value="HIGH">Alta</option>
+                <option value="MEDIUM">Media</option>
+                <option value="LOW">Baja</option>
+                <option value="INFO">Info</option>
+              </select>
+              <input type="text" id="filter-search" class="filter-input" placeholder="Buscar por IP, agente, descripción..." />
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-container" id="alerts-table-full">
+              <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <p>Cargando alertas...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── IP REPUTATION VIEW ──────────────────────────────── -->
+        <div class="view" id="view-ip">
+          <div class="view-header">
+            <h1 class="view-title">Reputación de IPs</h1>
+          </div>
+          <div class="search-hero">
+            <div class="search-bar-large">
+              <span class="search-icon-large">🔍</span>
+              <input type="text" id="ip-input" class="search-input-large" placeholder="Ingresa una dirección IP (ej: 1.2.3.4)" />
+              <button class="btn-primary" id="btn-check-ip">Analizar</button>
+            </div>
+            <div class="search-examples">
+              Ejemplos:
+              <span class="example-tag" data-value="8.8.8.8">8.8.8.8</span>
+              <span class="example-tag" data-value="1.1.1.1">1.1.1.1</span>
+              <span class="example-tag" data-value="45.33.32.156">45.33.32.156</span>
+            </div>
+          </div>
+
+          <div id="ip-result" class="ip-result-panel hidden">
+            <div class="ip-result-header">
+              <h2 id="ip-result-title" class="ip-result-ip">—</h2>
+              <div class="ip-score-ring" id="ip-score-ring">
+                <svg viewBox="0 0 100 100">
+                  <circle class="ring-bg" cx="50" cy="50" r="42"/>
+                  <circle class="ring-fill" id="ring-fill" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="264"/>
+                </svg>
+                <div class="ring-label">
+                  <span id="ring-score">0</span>
+                  <small>Abuse Score</small>
+                </div>
+              </div>
+            </div>
+            <div class="ip-sources-grid" id="ip-sources-grid"></div>
+          </div>
+        </div>
+
+        <!-- ── CVE LOOKUP VIEW ──────────────────────────────────── -->
+        <div class="view" id="view-cve">
+          <div class="view-header">
+            <h1 class="view-title">CVE Lookup — NVD/NIST</h1>
+          </div>
+          <div class="search-hero">
+            <div class="search-bar-large">
+              <span class="search-icon-large">🛡️</span>
+              <input type="text" id="cve-input" class="search-input-large" placeholder="Ingresa un ID CVE (ej: CVE-2024-1234)" />
+              <button class="btn-primary" id="btn-check-cve">Buscar</button>
+            </div>
+            <div class="search-examples">
+              Ejemplos:
+              <span class="example-tag" data-target="cve-input">CVE-2023-44487</span>
+              <span class="example-tag" data-target="cve-input">CVE-2024-3400</span>
+              <span class="example-tag" data-target="cve-input">CVE-2021-44228</span>
+            </div>
+          </div>
+          <div id="cve-result" class="cve-result-panel hidden"></div>
+        </div>
+
+        <!-- ── AUDIT TRAIL VIEW ────────────────────────────────── -->
+        <div class="view" id="view-audit">
+          <div class="view-header">
+            <h1 class="view-title">Audit Trail — Blockchain</h1>
+            <div class="chain-info" id="chain-info">
+              <span class="chain-dot"></span>
+              <span id="chain-network">Sin conexión blockchain</span>
+            </div>
+          </div>
+
+          <div class="audit-stats" id="audit-stats">
+            <div class="card audit-stat-card">
+              <div class="audit-stat-value" id="audit-total">—</div>
+              <div class="audit-stat-label">Eventos On-Chain</div>
+            </div>
+            <div class="card audit-stat-card">
+              <div class="audit-stat-value" id="audit-contract">—</div>
+              <div class="audit-stat-label">Contrato SecurityAudit</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Eventos Registrados en Ethereum</h2>
+            </div>
+            <div class="table-container" id="audit-table">
+              <div class="empty-state">
+                <div class="empty-icon">⛓️</div>
+                <p>Conecta tu wallet para ver el audit trail on-chain</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SERVICIOS VIEW ───────────────────────────────────── -->
+        <div class="view" id="view-servicios">
+          <div class="view-header">
+            <h1 class="view-title">⚙ Estado de Servicios</h1>
+            <button class="btn-refresh" id="btn-refresh-services" title="Refrescar estado">↻</button>
+          </div>
+
+          <!-- Estado en tiempo real de cada componente del stack -->
+          <div class="services-grid" id="services-grid">
+
+            <!-- Rust Gateway -->
+            <div class="card service-card" id="svc-gateway">
+              <div class="service-header">
+                <span class="service-icon">⚡</span>
+                <div class="service-info">
+                  <div class="service-name">Rust API Gateway</div>
+                  <div class="service-subtitle">cybersec-gateway.exe · :8080</div>
+                </div>
+                <span class="service-badge" id="svc-gateway-badge">–</span>
+              </div>
+              <div class="service-details" id="svc-gateway-details">
+                <div class="svc-row"><span>Uptime</span><span id="svc-gw-uptime">–</span></div>
+                <div class="svc-row"><span>Alertas en cache</span><span id="svc-gw-alerts">–</span></div>
+                <div class="svc-row"><span>IPs en cache</span><span id="svc-gw-ips">–</span></div>
+                <div class="svc-row"><span>APIs configuradas</span><span id="svc-gw-apis">–</span></div>
+                <div class="svc-row"><span>Versión</span><span id="svc-gw-version">–</span></div>
+              </div>
+            </div>
+
+            <!-- Anvil / Hardhat -->
+            <div class="card service-card" id="svc-blockchain">
+              <div class="service-header">
+                <span class="service-icon">⛓️</span>
+                <div class="service-info">
+                  <div class="service-name">Blockchain (Anvil)</div>
+                  <div class="service-subtitle">http://localhost:8545 · Chain 31337</div>
+                </div>
+                <span class="service-badge" id="svc-blockchain-badge">–</span>
+              </div>
+              <div class="service-details">
+                <div class="svc-row"><span>Red</span><span id="svc-chain-network">–</span></div>
+                <div class="svc-row"><span>Bloque actual</span><span id="svc-chain-block">–</span></div>
+                <div class="svc-row"><span>Contrato SecurityAudit</span><span id="svc-chain-contract">–</span></div>
+              </div>
+            </div>
+
+            <!-- WebSocket -->
+            <div class="card service-card" id="svc-ws">
+              <div class="service-header">
+                <span class="service-icon">📡</span>
+                <div class="service-info">
+                  <div class="service-name">WebSocket (Alertas)</div>
+                  <div class="service-subtitle">ws://localhost:8080/ws/alerts</div>
+                </div>
+                <span class="service-badge" id="svc-ws-badge">–</span>
+              </div>
+              <div class="service-details">
+                <div class="svc-row"><span>Estado</span><span id="svc-ws-status">–</span></div>
+                <div class="svc-row"><span>Alertas recibidas (sesión)</span><span id="svc-ws-count">–</span></div>
+              </div>
+            </div>
+
+            <!-- Wazuh SIEM -->
+            <div class="card service-card" id="svc-wazuh">
+              <div class="service-header">
+                <span class="service-icon">🔐</span>
+                <div class="service-info">
+                  <div class="service-name">Wazuh SIEM</div>
+                  <div class="service-subtitle">https://localhost:55000</div>
+                </div>
+                <span class="service-badge" id="svc-wazuh-badge">–</span>
+              </div>
+              <div class="service-details">
+                <div class="svc-row"><span>Configurado</span><span id="svc-wazuh-cfg">–</span></div>
+                <div class="svc-row"><span>Modo</span><span id="svc-wazuh-mode">Docker</span></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Instalador Windows MSI -->
+          <div class="card installer-card">
+            <div class="card-header">
+              <h2 class="card-title">🖥 Instalador Windows — CyberSec Gateway</h2>
+            </div>
+            <div class="installer-body">
+              <div class="installer-info">
+                <div class="installer-version">v0.1.0 · x64 · Windows 10/11</div>
+                <p class="installer-desc">
+                  El instalador MSI despliega <strong>cybersec-gateway.exe</strong> como un 
+                  <strong>servicio Windows</strong> con inicio automático. Incluye pantalla informativa 
+                  para usuario final y modo avanzado para administradores.
+                </p>
+                <div class="installer-features">
+                  <span class="feature-chip">✔ Servicio Windows autostart</span>
+                  <span class="feature-chip">✔ Variables de entorno del sistema</span>
+                  <span class="feature-chip">✔ Modo admin SHOW_ADVANCED=1</span>
+                  <span class="feature-chip">✔ API Keys opcionales</span>
+                  <span class="feature-chip">✔ Acceso directo en menú Inicio</span>
+                </div>
+              </div>
+              <div class="installer-actions">
+                <div class="installer-cmd">
+                  <div class="cmd-label">Instalación estándar:</div>
+                  <code class="cmd-block">msiexec /i cybersec-gateway.msi</code>
+                </div>
+                <div class="installer-cmd">
+                  <div class="cmd-label">Modo administrador (con API Keys):</div>
+                  <code class="cmd-block">msiexec /i cybersec-gateway.msi SHOW_ADVANCED=1</code>
+                </div>
+                <div class="installer-cmd">
+                  <div class="cmd-label">Instalación silenciosa (CI/CD):</div>
+                  <code class="cmd-block">msiexec /i cybersec-gateway.msi ABUSEIPDB_API_KEY=xxx /qn</code>
+                </div>
+                <div class="installer-build-note">
+                  <span class="build-icon">🔧</span>
+                  Para generar el .msi: compilar con <code>cargo build --release</code> y luego ejecutar
+                  <code>packages/windows/generate_gateway_msi.ps1</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- /view-servicios -->
+
+      </main>
+
+      <!-- TOAST NOTIFICATIONS -->
+      <div class="toast-container" id="toast-container"></div>
+
+      <!-- WEBSOCKET STATUS -->
+      <div class="ws-indicator" id="ws-indicator" title="Estado WebSocket">
+        <span class="ws-dot"></span>
+        <span class="ws-label">WS</span>
+      </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
