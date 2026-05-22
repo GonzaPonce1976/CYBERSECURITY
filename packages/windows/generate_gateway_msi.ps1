@@ -37,6 +37,12 @@ if ($SIGN_TOOLS_PATH -ne "") {
     $SIGNTOOL_EXE = Join-Path $SIGN_TOOLS_PATH "signtool.exe"
 }
 
+Write-Host "Checking for WinSW (Windows Service Wrapper)..."
+if (-not (Test-Path "cybersec-gateway-service.exe")) {
+    Write-Host "Downloading WinSW..."
+    Invoke-WebRequest -Uri "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" -OutFile "cybersec-gateway-service.exe"
+}
+
 Write-Host "Building gateway MSI installer: $MSI_NAME"
 
 & $CANDLE_EXE -nologo .\gateway-installer.wxs -out "gateway-installer.wixobj" -ext WixUtilExtension -ext WixUIExtension

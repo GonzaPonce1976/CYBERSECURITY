@@ -1,0 +1,9 @@
+<service>
+  <id>CybersecGateway</id>
+  <name>Cybersec Gateway - Threat Intelligence API</name>
+  <description>API Gateway y WebSocket server para la plataforma CyberSecurity DApp.</description>
+  <executable>%BASE%\cybersec-gateway.exe</executable>
+  <log mode="roll"></log>
+  <workingdirectory>%BASE%</workingdirectory>
+  <stopexecutable>%BASE%\cybersec-gateway.exe</stopexecutable>
+</service>

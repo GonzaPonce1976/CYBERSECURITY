@@ -58,8 +58,20 @@
               Source="..\..\rust-gateway\target\release\cybersec-gateway.exe"
               KeyPath="yes"
               Checksum="yes" />
+      </Component>
 
-        <!-- Servicio Windows: arranque automatico -->
+      <!-- WinSW Service Wrapper -->
+      <Component Id="CybersecGatewayServiceWrapper"
+                 Guid="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                 Win64="yes">
+        <File Id="CybersecGatewayServiceExe"
+              Source="cybersec-gateway-service.exe"
+              KeyPath="yes"
+              Checksum="yes" />
+        <File Id="CybersecGatewayServiceXml"
+              Source="cybersec-gateway-service.xml" />
+
+        <!-- Servicio Windows administrado por WinSW -->
         <ServiceInstall
             Id="CybersecGatewayService"
             Name="CybersecGateway"
@@ -154,6 +166,7 @@
     <!-- ─── Features ──────────────────────────────────────────────── -->
     <Feature Id="ProductFeature" Title="Cybersec Gateway" Level="1">
       <ComponentRef Id="CybersecGatewayExeComponent" />
+      <ComponentRef Id="CybersecGatewayServiceWrapper" />
       <ComponentRef Id="GatewayEnvFile" />
       <ComponentRef Id="GatewayEnvironmentVariables" />
       <ComponentRef Id="ApplicationShortcuts" />
