@@ -13,20 +13,18 @@ $LIGHT_EXE = "light.exe"
 $SIGNTOOL_EXE = "signtool.exe"
 
 if ($help.isPresent) {
-    @"
-    Build the Cybersec Gateway MSI package.
-
-    PARAMETERS:
-      -MSI_NAME <name>            Output MSI name (default: cybersec-gateway.msi)
-      -WIX_TOOLS_PATH <path>      Path to WiX tools directory containing candle.exe and light.exe
-      -SIGN <yes/no>              Sign the final MSI with signtool (default: no)
-      -SIGN_TOOLS_PATH <path>     Path to signtool.exe
-      -CERTIFICATE_PATH <path>    Path to the .pfx certificate for signing
-      -CERTIFICATE_PASSWORD <pw>  Password for the .pfx certificate
-
-    Example:
-      ./generate_gateway_msi.ps1 -MSI_NAME cybersec-gateway.msi -WIX_TOOLS_PATH "C:\Program Files (x86)\WiX Toolset v3.11\bin" -SIGN no
-    "@"
+    Write-Host "Build the Cybersec Gateway MSI package."
+    Write-Host ""
+    Write-Host "PARAMETERS:"
+    Write-Host "  -MSI_NAME <name>            Output MSI name (default: cybersec-gateway.msi)"
+    Write-Host "  -WIX_TOOLS_PATH <path>      Path to WiX tools directory containing candle.exe and light.exe"
+    Write-Host "  -SIGN <yes/no>              Sign the final MSI with signtool (default: no)"
+    Write-Host "  -SIGN_TOOLS_PATH <path>     Path to signtool.exe"
+    Write-Host "  -CERTIFICATE_PATH <path>    Path to the .pfx certificate for signing"
+    Write-Host "  -CERTIFICATE_PASSWORD <pw>  Password for the .pfx certificate"
+    Write-Host ""
+    Write-Host "Example:"
+    Write-Host "  ./generate_gateway_msi.ps1 -MSI_NAME cybersec-gateway.msi -WIX_TOOLS_PATH `"C:\Program Files (x86)\WiX Toolset v3.11\bin`" -SIGN no"
     Exit
 }
 

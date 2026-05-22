@@ -5,6 +5,7 @@
   <Product Id="*"
            Name="Cybersec Gateway"
            Language="1033"
+           Codepage="65001"
            Version="0.1.0"
            Manufacturer="Cybersecurity DApp"
            UpgradeCode="3f1e7f5f-0d10-4f5e-9d8f-0c600f4c9c1a">
@@ -13,13 +14,13 @@
              Compressed="yes"
              InstallScope="perMachine"
              Platform="x64"
-             Description="CyberSecurity DApp — Rust API Gateway + Threat Intelligence"
+             Description="CyberSecurity DApp - Rust API Gateway + Threat Intelligence"
              Comments="Instala el servicio Windows cybersec-gateway.exe y configura variables de entorno." />
 
     <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
 
     <!-- Previene instalaciones en paralelo -->
-    <MajorUpgrade DowngradeErrorMessage="Ya existe una versión más reciente de Cybersec Gateway instalada." />
+    <MajorUpgrade DowngradeErrorMessage="Ya existe una version mas reciente de Cybersec Gateway instalada." />
 
     <!-- ─── Propiedades configurables ──────────────────────────────── -->
     <!-- Usar SHOW_ADVANCED=1 en msiexec para activar el flujo de admin -->
@@ -27,18 +28,18 @@
     <Property Id="GATEWAY_HOST"     Value="0.0.0.0" />
     <Property Id="GATEWAY_PORT"     Value="8080" />
     <Property Id="WAZUH_API_URL"    Value="https://localhost:55000" />
-    <Property Id="ABUSEIPDB_API_KEY"  Value="" />
-    <Property Id="VIRUSTOTAL_API_KEY" Value="" />
-    <Property Id="GREYNOISE_API_KEY"  Value="" />
-    <Property Id="OTX_API_KEY"        Value="" />
-    <Property Id="NVD_API_KEY"        Value="" />
+    <Property Id="ABUSEIPDB_API_KEY"  Secure="yes" />
+    <Property Id="VIRUSTOTAL_API_KEY" Secure="yes" />
+    <Property Id="GREYNOISE_API_KEY"  Secure="yes" />
+    <Property Id="OTX_API_KEY"        Secure="yes" />
+    <Property Id="NVD_API_KEY"        Secure="yes" />
 
-    <!-- Puerto del frontend (sólo informativo, no configura nada) -->
+    <!-- Puerto del frontend (solo informativo, no configura nada) -->
     <Property Id="DASHBOARD_PORT" Value="5173" />
 
-    <!-- ─── Estructura de directorios ─────────────────────────────── -->
+    <!-- ─── Estructura de directorios ─────────────────────────────────────────────── -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
+      <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="CybersecGateway" />
       </Directory>
       <Directory Id="ProgramMenuFolder">
@@ -54,16 +55,16 @@
                  Guid="f24a2386-6ef9-4c45-8f3d-f8f2b96c3a15"
                  Win64="yes">
         <File Id="CybersecGatewayExe"
-              Source="..\rust-gateway\target\release\cybersec-gateway.exe"
+              Source="..\..\rust-gateway\target\release\cybersec-gateway.exe"
               KeyPath="yes"
               Checksum="yes" />
 
-        <!-- Servicio Windows: arranque automático -->
+        <!-- Servicio Windows: arranque automatico -->
         <ServiceInstall
             Id="CybersecGatewayService"
             Name="CybersecGateway"
-            DisplayName="Cybersec Gateway — Threat Intelligence API"
-            Description="API Gateway del CyberSecurity DApp. Agrega datos de Wazuh SIEM, AbuseIPDB, VirusTotal, GreyNoise y más. Expone REST en :8080 y WebSocket en :8080/ws/alerts."
+            DisplayName="Cybersec Gateway - Threat Intelligence API"
+            Description="API Gateway del CyberSecurity DApp. Agrega datos de Wazuh SIEM, AbuseIPDB, VirusTotal, GreyNoise y mas. Expone REST en :8080 y WebSocket en :8080/ws/alerts."
             Type="ownProcess"
             Start="auto"
             ErrorControl="normal"
@@ -84,8 +85,8 @@
       <Component Id="GatewayEnvFile"
                  Guid="b1c2d3e4-f5a6-7890-abcd-ef1234567890"
                  Win64="yes">
-        <File Id="GatewayDotEnv"
-              Source="..\rust-gateway\.env.default"
+        <File Id="EnvDefaultFile"
+              Source="..\..\rust-gateway\.env.default"
               Name=".env"
               KeyPath="yes" />
       </Component>
@@ -95,18 +96,18 @@
                  Guid="4d9a1f75-2e28-4c4a-8c9f-9d84b5b05e1c"
                  Win64="yes">
         <CreateFolder />
-        <util:Environment Id="EnvGatewayHost"     Name="GATEWAY_HOST"        Value="[GATEWAY_HOST]"        Action="set" Part="all" System="yes" KeyPath="yes" />
-        <util:Environment Id="EnvGatewayPort"     Name="GATEWAY_PORT"        Value="[GATEWAY_PORT]"        Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvWazuhApiUrl"     Name="WAZUH_API_URL"       Value="[WAZUH_API_URL]"       Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvAbuseIpDbApiKey" Name="ABUSEIPDB_API_KEY"   Value="[ABUSEIPDB_API_KEY]"   Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvVirusTotalApiKey" Name="VIRUSTOTAL_API_KEY" Value="[VIRUSTOTAL_API_KEY]"  Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvGreyNoiseApiKey" Name="GREYNOISE_API_KEY"   Value="[GREYNOISE_API_KEY]"   Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvOtxApiKey"       Name="OTX_API_KEY"         Value="[OTX_API_KEY]"         Action="set" Part="all" System="yes" />
-        <util:Environment Id="EnvNvdApiKey"       Name="NVD_API_KEY"         Value="[NVD_API_KEY]"         Action="set" Part="all" System="yes" />
+        <Environment Id="EnvHost" Action="set" Name="GATEWAY_HOST" Value="[GATEWAY_HOST]" System="yes" Part="all" />
+        <Environment Id="EnvPort" Action="set" Name="GATEWAY_PORT" Value="[GATEWAY_PORT]" System="yes" Part="all" />
+        <Environment Id="EnvWazuh" Action="set" Name="WAZUH_API_URL" Value="[WAZUH_API_URL]" System="yes" Part="all" />
+        <Environment Id="EnvAbuse" Action="set" Name="ABUSEIPDB_API_KEY" Value="[ABUSEIPDB_API_KEY]" System="yes" Part="all" />
+        <Environment Id="EnvVT" Action="set" Name="VIRUSTOTAL_API_KEY" Value="[VIRUSTOTAL_API_KEY]" System="yes" Part="all" />
+        <Environment Id="EnvGrey" Action="set" Name="GREYNOISE_API_KEY" Value="[GREYNOISE_API_KEY]" System="yes" Part="all" />
+        <Environment Id="EnvOtx" Action="set" Name="OTX_API_KEY" Value="[OTX_API_KEY]" System="yes" Part="all" />
+        <Environment Id="EnvNvd" Action="set" Name="NVD_API_KEY" Value="[NVD_API_KEY]" System="yes" Part="all" />
       </Component>
     </DirectoryRef>
 
-    <!-- Acceso directo en el menú Inicio -->
+    <!-- Acceso directo en el menu Inicio -->
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcuts"
                  Guid="c9d8e7f6-a5b4-3c2d-1e0f-fedcba987654">
@@ -126,7 +127,7 @@
       </Component>
     </DirectoryRef>
 
-    <!-- ─── UI — Flujo de pantallas ───────────────────────────────── -->
+    <!-- ─── UI - Flujo de pantallas ───────────────────────────────── -->
     <UI>
       <UIRef Id="WixUI_Minimal" />
 
@@ -134,23 +135,12 @@
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="GatewayAdminDlg" Order="1">SHOW_ADVANCED = "1"</Publish>
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="GatewayConfigDlg" Order="2">SHOW_ADVANCED &lt;&gt; "1"</Publish>
 
-      <!-- Flujo pantalla informativa (usuario final) -->
-      <Publish Dialog="GatewayConfigDlg" Control="Next" Event="NewDialog" Value="ProgressDlg">1</Publish>
-      <Publish Dialog="GatewayConfigDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
 
-      <!-- Flujo admin avanzado -->
-      <Publish Dialog="GatewayAdminDlg" Control="Next" Event="NewDialog" Value="GatewayApiKeysDlg">1</Publish>
-      <Publish Dialog="GatewayAdminDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
-
-      <!-- Flujo API Keys (solo admin) -->
-      <Publish Dialog="GatewayApiKeysDlg" Control="Next" Event="NewDialog" Value="ProgressDlg">1</Publish>
-      <Publish Dialog="GatewayApiKeysDlg" Control="Back" Event="NewDialog" Value="GatewayAdminDlg">1</Publish>
-
-      <!-- Al finalizar: mostrar pantalla de éxito con URL del dashboard -->
-      <Publish Dialog="ExitDlg" Control="Finish" Event="DoAction" Value="LaunchDashboard">NOT Installed</Publish>
+      <!-- Al finalizar: mostrar pantalla de exito con URL del dashboard -->
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchDashboard">NOT Installed</Publish>
     </UI>
 
-    <!-- Acción personalizada: abrir el dashboard al finalizar -->
+    <!-- Accion personalizada: abrir el dashboard al finalizar -->
     <CustomAction Id="LaunchDashboard"
                   Directory="TARGETDIR"
                   ExeCommand="[SystemFolder]cmd.exe /c start http://localhost:[DASHBOARD_PORT]"
@@ -172,49 +162,49 @@
   </Product>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- DIÁLOGOS PERSONALIZADOS                                        -->
+  <!-- DIaLOGOS PERSONALIZADOS                                        -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
 
   <Fragment>
-
-    <!-- ── Pantalla informativa (usuario final, sin parámetros) ──── -->
+    <UI>
+    <!-- ── Pantalla informativa (usuario final, sin parametros) ──── -->
     <Dialog Id="GatewayConfigDlg" Width="370" Height="270"
-            Title="CyberSec Gateway — Instalación">
+            Title="CyberSec Gateway - Instalacion">
 
-      <!-- Título -->
+      <!-- Titulo -->
       <Control Id="Title" Type="Text" X="20" Y="15" Width="330" Height="20"
                Transparent="yes" NoPrefix="yes"
-               Text="{\WixUI_Font_Title}Instalación Estándar" />
+               Text="{\WixUI_Font_Title}Instalacion Estandar" />
 
-      <!-- Línea separadora -->
+      <!-- Linea separadora -->
       <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
 
-      <!-- Ícono informativo -->
+      <!-- icono informativo -->
       <Control Id="InfoIcon" Type="Text" X="20" Y="58" Width="30" Height="30"
-               Text="🛡️" />
+               Text="(*)" />
 
-      <!-- Descripción -->
+      <!-- Descripcion -->
       <Control Id="Description" Type="Text" X="58" Y="58" Width="292" Height="80"
-               Text="El instalador desplegará el servicio {\b}Cybersec Gateway{\b} con configuración predeterminada.&#10;&#10;No es necesario ingresar ningún valor. El servicio arrancará automáticamente en el puerto {\b}8080{\b}." />
+               Text="El instalador desplegara el servicio {\b}Cybersec Gateway{\b} con configuracion predeterminada.&#10;&#10;No es necesario ingresar ningun valor. El servicio arrancara automaticamente en el puerto {\b}8080{\b}." />
 
-      <!-- Línea de detalles técnicos -->
+      <!-- Linea de detalles tecnicos -->
       <Control Id="TechDetails" Type="Text" X="20" Y="148" Width="330" Height="60"
-               Text="{\WixUI_Font_Normal}✔  Servicio Windows — inicio automático&#10;✔  API REST disponible en http://localhost:8080&#10;✔  WebSocket en ws://localhost:8080/ws/alerts&#10;✔  Dashboard en http://localhost:5173" />
+               Text="{\WixUI_Font_Normal}+  Servicio Windows - inicio automatico&#10;+  API REST disponible en http://localhost:8080&#10;+  WebSocket en ws://localhost:8080/ws/alerts&#10;+  Dashboard en http://localhost:5173" />
 
       <!-- Nota para administradores -->
       <Control Id="AdminNote" Type="Text" X="20" Y="215" Width="330" Height="18"
-               Text="ℹ️  Administradores: use SHOW_ADVANCED=1 para configuración personalizada." />
+               Text="(!) Administradores: use SHOW_ADVANCED=1 para configuracion personalizada." />
 
-      <!-- Línea separadora inferior -->
+      <!-- Linea separadora inferior -->
       <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
 
       <!-- Botones -->
       <Control Id="Next" Type="PushButton" X="236" Y="243" Width="75" Height="23"
-               Default="yes" Text="Instalar ›">
+               Default="yes" Text="Instalar &gt;">
         <Publish Event="NewDialog" Value="ProgressDlg">1</Publish>
       </Control>
       <Control Id="Back" Type="PushButton" X="156" Y="243" Width="75" Height="23"
-               Text="‹ Atrás">
+               Text="&lt; Atras">
         <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
       </Control>
       <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="23"
@@ -223,21 +213,21 @@
       </Control>
     </Dialog>
 
-    <!-- ── Pantalla de instalación controlada (administradores) ──── -->
+    <!-- ── Pantalla de instalacion controlada (administradores) ──── -->
     <Dialog Id="GatewayAdminDlg" Width="370" Height="270"
-            Title="CyberSec Gateway — Configuración Avanzada">
+            Title="CyberSec Gateway - Configuracion Avanzada">
 
       <Control Id="Title" Type="Text" X="20" Y="15" Width="330" Height="20"
                Transparent="yes" NoPrefix="yes"
-               Text="{\WixUI_Font_Title}Instalación Controlada — Administrador" />
+               Text="{\WixUI_Font_Title}Instalacion Controlada - Administrador" />
 
       <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
 
       <Control Id="AdminIcon" Type="Text" X="20" Y="58" Width="30" Height="30"
-               Text="⚙️" />
+               Text="(O)" />
 
       <Control Id="Description" Type="Text" X="58" Y="58" Width="292" Height="70"
-               Text="Modo avanzado activado. Puede configurar las propiedades del gateway mediante parámetros MSI. Continúe para ingresar las API Keys de los servicios de Threat Intelligence." />
+               Text="Modo avanzado activado. Puede configurar las propiedades del gateway mediante parametros MSI. Continue para ingresar las API Keys de los servicios de Threat Intelligence." />
 
       <!-- Host y Puerto -->
       <Control Id="LabelHost" Type="Text" X="20" Y="138" Width="80" Height="14"
@@ -259,11 +249,11 @@
       <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
 
       <Control Id="Next" Type="PushButton" X="220" Y="243" Width="90" Height="23"
-               Default="yes" Text="API Keys ›">
+               Default="yes" Text="API Keys >">
         <Publish Event="NewDialog" Value="GatewayApiKeysDlg">1</Publish>
       </Control>
       <Control Id="Back" Type="PushButton" X="130" Y="243" Width="80" Height="23"
-               Text="‹ Atrás">
+               Text="&lt; Atras">
         <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
       </Control>
       <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="23"
@@ -274,7 +264,7 @@
 
     <!-- ── Pantalla de API Keys (solo admin) ─────────────────────── -->
     <Dialog Id="GatewayApiKeysDlg" Width="370" Height="290"
-            Title="CyberSec Gateway — API Keys (Opcional)">
+            Title="CyberSec Gateway - API Keys (Opcional)">
 
       <Control Id="Title" Type="Text" X="20" Y="15" Width="330" Height="20"
                Transparent="yes" NoPrefix="yes"
@@ -316,24 +306,26 @@
                Property="NVD_API_KEY" Password="yes" />
 
       <Control Id="SecureNote" Type="Text" X="20" Y="212" Width="330" Height="18"
-               Text="🔒 Las claves se almacenan como variables de entorno del sistema (cifradas por Windows)." />
+               Text="* Las claves se almacenan como variables de entorno del sistema (cifradas por Windows)." />
 
       <Control Id="BottomLine" Type="Line" X="0" Y="253" Width="370" Height="0" />
 
       <Control Id="Next" Type="PushButton" X="220" Y="262" Width="90" Height="23"
-               Default="yes" Text="Instalar ›">
+               Default="yes" Text="Instalar &gt;">
         <Publish Event="NewDialog" Value="ProgressDlg">1</Publish>
       </Control>
       <Control Id="Back" Type="PushButton" X="130" Y="262" Width="80" Height="23"
-               Text="‹ Atrás">
+               Text="&lt; Atras">
         <Publish Event="NewDialog" Value="GatewayAdminDlg">1</Publish>
       </Control>
       <Control Id="Cancel" Type="PushButton" X="304" Y="262" Width="56" Height="23"
                Cancel="yes" Text="Cancelar">
         <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
       </Control>
-    </Dialog>
-
+      </Dialog>
+    </UI>
   </Fragment>
+
+  <!-- Flujo de la UI -->
 
 </Wix>
