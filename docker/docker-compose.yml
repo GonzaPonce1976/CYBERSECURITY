@@ -25,7 +25,7 @@ services:
     networks:
       - cybersec-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -sk -u admin:SecretPassword https://localhost:9200/_cluster/health | grep -q 'green\\|yellow'"]
+      test: ["CMD", "/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9200"]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -49,13 +49,16 @@ services:
       - FILEBEAT_SSL_VERIFICATION_MODE=full
       - API_USERNAME=${WAZUH_API_USER:-wazuh-wui}
       - API_PASSWORD=${WAZUH_API_PASS:-MyS3cr37P450r.*}
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
     volumes:
       - wazuh-manager-data:/var/ossec/data
       - wazuh-manager-logs:/var/ossec/logs
       - wazuh-manager-etc:/var/ossec/etc
-      - ./config/wazuh/certs/root-ca-manager.pem:/etc/filebeat/certs/root-ca.pem:ro
-      - ./config/wazuh/certs/wazuh.pem:/etc/filebeat/certs/filebeat.pem:ro
-      - ./config/wazuh/certs/wazuh-key.pem:/etc/filebeat/certs/filebeat.key:ro
+      - ./config/wazuh/certs/root-ca-manager.pem:/etc/ssl/root-ca.pem:ro
+      - ./config/wazuh/certs/wazuh.pem:/etc/ssl/filebeat.pem:ro
+      - ./config/wazuh/certs/wazuh-key.pem:/etc/ssl/filebeat.key:ro
     networks:
       - cybersec-net
     healthcheck:
@@ -99,13 +102,14 @@ services:
       wazuh-manager:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8080"
     env_file:
       - ../.env
     environment:
       - GATEWAY_HOST=0.0.0.0
       - GATEWAY_PORT=8080
       - WAZUH_API_URL=https://wazuh-manager:55000
+      - DATABASE_URL=/tmp/gateway.db
     networks:
       - cybersec-net
     healthcheck:
