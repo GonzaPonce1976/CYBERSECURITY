@@ -1,5 +1,5 @@
 require("@nomicfoundation/hardhat-viem");
-require("@nomicfoundation/hardhat-chai-matchers");
+// NOTE: hardhat-chai-matchers v3 es incompatible con Hardhat 2; se usa Hardhat 3 sin él.
 require("dotenv/config");
 
 const DEPLOYER_PRIVATE_KEY =
@@ -25,7 +25,6 @@ module.exports = {
       chainId: 31337,
     },
     hardhat: {
-      type: "edr-simulated",
       chainId: 31337,
     },
     sepolia: {

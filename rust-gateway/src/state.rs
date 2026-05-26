@@ -69,9 +69,17 @@ impl AppState {
             .build()?;
 
         // Inicializar pool de conexiones SQLite
-        let manager = SqliteConnectionManager::file("gateway_data.db");
+        let db_path = std::env::var("DATABASE_URL").unwrap_or_else(|_| "gateway_data.db".to_string());
+        // Crear directorio padre si no existe
+        if let Some(parent) = std::path::Path::new(&db_path).parent() {
+            if !parent.as_os_str().is_empty() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+        }
+        let manager = SqliteConnectionManager::file(&db_path);
         let db_pool = Pool::new(manager)?;
         Self::init_database(&db_pool)?;
+
 
         let wazuh_url = std::env::var("WAZUH_API_URL")
             .unwrap_or_else(|_| "https://localhost:55000".to_string());

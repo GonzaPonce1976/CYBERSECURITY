@@ -1,4 +1,4 @@
-FROM rust:1.80-slim-bookworm AS builder
+FROM rust:1.91-slim-bookworm AS builder
 
 # Instalar dependencias de sistema (OpenSSL para reqwest)
 RUN apt-get update && apt-get install -y \
