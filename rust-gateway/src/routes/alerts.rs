@@ -67,16 +67,27 @@ async fn get_alert(
 
 async fn receive_webhook(
     State(state): State<Arc<AppState>>,
-    axum::extract::Json(mut payload): axum::extract::Json<Value>,
+    axum::extract::Json(payload): axum::extract::Json<Value>,
 ) -> Json<Value> {
-    // Asignar un ID único a la alerta si no lo trae
-    let alert_id = payload.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    
-    payload["id"] = json!(alert_id);
-    payload["received_at"] = json!(chrono::Utc::now().to_rfc3339());
+    use crate::models::alert::Alert;
+
+    // Intentar deserializar a Alert
+    let alert: Alert = match serde_json::from_value(payload.clone()) {
+        Ok(a) => a,
+        Err(e) => {
+            tracing::error!("Error deserializando alerta desde webhook: {}", e);
+            // Fallback, intentamos mapear a mano o fallar
+            return Json(json!({
+                "status": "error",
+                "message": format!("Payload inválido: {}", e)
+            }));
+        }
+    };
+
+    let alert_id = alert.id.clone();
 
     // Insertar en caché
-    state.alerts_cache.insert(alert_id.clone(), payload.clone());
+    state.alerts_cache.insert(alert_id.clone(), alert);
 
     // Intentar guardar en la DB (ignorar errores en caso de no DB)
     if let Ok(conn) = state.db_pool.get() {
@@ -88,7 +99,7 @@ async fn receive_webhook(
         );
     }
 
-    tracing::info!("🔔 Nueva alerta recibida: {}", alert_id);
+    tracing::info!("🔔 Nueva alerta recibida vía Webhook: {}", alert_id);
 
     Json(json!({
         "status": "ok",
