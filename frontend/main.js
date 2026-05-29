@@ -287,9 +287,17 @@ function renderAlertsRows(containerId, alerts) {
             <td>${severityBadge(a.severity)}</td>
             <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.description || ''}">${a.description || '—'}</td>
             <td class="mono">${a.src_ip || '—'}</td>
-            <td class="text-muted">${a.agent_name || '—'}</td>
+            <td class="agent-cell">
+              ${(() => {
+                const host = a.source_agent || a.agent_name;
+                const sub  = (a.source_agent && a.agent_name && a.source_agent !== a.agent_name) ? a.agent_name : null;
+                return host
+                  ? `<span class="agent-host" title="Equipo: ${host}">&#x1F4BB; ${host}</span>${sub ? `<br><span class="agent-sub">${sub}</span>` : ''}`
+                  : '<span class="text-muted">—</span>';
+              })()}
+            </td>
             <td class="text-muted">${timeAgo(a.timestamp)}</td>
-            <td>${a.on_chain ? '<span style="color:var(--green)">⛓️</span>' : '<span class="text-muted">—</span>'}</td>
+            <td>${a.on_chain ? '<span style="color:var(--green)">&#x26D3;&#xFE0F;</span>' : '<span class="text-muted">—</span>'}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -307,7 +315,8 @@ function renderAlertsTable() {
     const matchSearch = !search ||
       (a.description || '').toLowerCase().includes(search) ||
       (a.src_ip || '').toLowerCase().includes(search) ||
-      (a.agent_name || '').toLowerCase().includes(search);
+      (a.agent_name || '').toLowerCase().includes(search) ||
+      (a.source_agent || '').toLowerCase().includes(search);
     return matchSev && matchSearch;
   });
 

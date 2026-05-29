@@ -73,6 +73,10 @@ pub struct Alert {
     /// Nombre del agente Wazuh que reporta
     pub agent_name: Option<String>,
 
+    /// Nombre real del equipo endpoint (hostname del PC que originó la alerta)
+    /// Poblado automáticamente por el gateway sensor al hacer forwarding
+    pub source_agent: Option<String>,
+
     /// Tipo de evento: "intrusion", "malware", "anomaly", "compliance"
     pub event_type: String,
 
@@ -112,6 +116,7 @@ impl Alert {
             src_ip: None,
             dst_ip: None,
             agent_name: None,
+            source_agent: None,
             event_type,
             mitre_tactics: vec![],
             mitre_techniques: vec![],

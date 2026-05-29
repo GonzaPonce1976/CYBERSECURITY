@@ -116,6 +116,7 @@ async fn receive_webhook(
             a.id = alert_id.clone();
             a.src_ip = payload.get("src_ip").and_then(|v| v.as_str()).map(|s| s.to_string());
             a.agent_name = payload.get("agent_name").and_then(|v| v.as_str()).map(|s| s.to_string());
+            a.source_agent = payload.get("source_agent").and_then(|v| v.as_str()).map(|s| s.to_string());
             a
         }
     };
