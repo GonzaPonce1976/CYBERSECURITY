@@ -56,6 +56,12 @@ pub struct AppState {
     pub otx_key: String,
     pub nvd_key: Option<String>,
 
+    /// Configuración de Blockchain
+    pub eth_rpc_url: String,
+    pub deployer_private_key: String,
+    pub contract_security_audit: String,
+    pub contract_alert_registry: String,
+
     /// Timestamp de inicio del gateway
     pub started_at: DateTime<Utc>,
 }
@@ -99,6 +105,13 @@ impl AppState {
         let nvd = Arc::new(NvdClient::new(http_client.clone(), nvd_key.clone()));
         let otx = Arc::new(OtxClient::new(http_client.clone(), otx_key.clone()));
 
+        let eth_rpc_url = std::env::var("ETH_RPC_URL")
+            .unwrap_or_else(|_| "http://localhost:8545".to_string());
+        let deployer_private_key = std::env::var("DEPLOYER_PRIVATE_KEY")
+            .unwrap_or_else(|_| "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".to_string());
+        let contract_security_audit = std::env::var("CONTRACT_SECURITY_AUDIT").unwrap_or_default();
+        let contract_alert_registry = std::env::var("CONTRACT_ALERT_REGISTRY").unwrap_or_default();
+
         let mut state = Self {
             alerts_cache: DashMap::new(),
             ip_cache: DashMap::new(),
@@ -115,6 +128,10 @@ impl AppState {
             greynoise_key,
             otx_key,
             nvd_key,
+            eth_rpc_url,
+            deployer_private_key,
+            contract_security_audit,
+            contract_alert_registry,
             started_at: Utc::now(),
         };
 

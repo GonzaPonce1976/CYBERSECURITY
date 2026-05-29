@@ -6,6 +6,7 @@ export default defineConfig({
   base: '/',
   server: {
     port: 5173,
+    host: true,          // Escucha en 0.0.0.0 — accesible desde la red LAN
     proxy: {
       '/api/': {
         target: 'http://127.0.0.1:8080',

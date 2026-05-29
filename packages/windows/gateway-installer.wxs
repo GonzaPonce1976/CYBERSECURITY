@@ -3,12 +3,12 @@
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
   <Product Id="*"
-           Name="Cybersec Gateway"
+           Name="Cybersec Gateway (Red LAN)"
            Language="1033"
            Codepage="65001"
            Version="0.1.0"
            Manufacturer="Cybersecurity DApp"
-           UpgradeCode="3f1e7f5f-0d10-4f5e-9d8f-0c600f4c9c1a">
+           UpgradeCode="3f1e7f5f-0d10-4f5e-9d8f-0c600f4c9c1b">
 
     <Package InstallerVersion="500"
              Compressed="yes"
@@ -27,7 +27,12 @@
     <Property Id="SHOW_ADVANCED"    Value="0" />
     <Property Id="GATEWAY_HOST"     Value="0.0.0.0" />
     <Property Id="GATEWAY_PORT"     Value="8080" />
-    <Property Id="WAZUH_API_URL"    Value="https://localhost:55000" />
+    <!-- IP del servidor principal en la red LAN -->
+    <Property Id="WAZUH_API_URL"    Value="https://192.168.18.30:55000" />
+    <Property Id="GATEWAY_SERVER_IP" Value="192.168.18.30" />
+    <Property Id="ETH_RPC_URL"      Value="http://192.168.18.30:8545" />
+    <Property Id="CONTRACT_SECURITY_AUDIT" Value="$(var.CONTRACT_SECURITY_AUDIT)" />
+    <Property Id="CONTRACT_ALERT_REGISTRY" Value="$(var.CONTRACT_ALERT_REGISTRY)" />
     <Property Id="ABUSEIPDB_API_KEY"  Secure="yes" />
     <Property Id="VIRUSTOTAL_API_KEY" Secure="yes" />
     <Property Id="GREYNOISE_API_KEY"  Secure="yes" />
@@ -36,6 +41,8 @@
 
     <!-- Puerto del frontend (solo informativo, no configura nada) -->
     <Property Id="DASHBOARD_PORT" Value="5173" />
+    <!-- IP del dashboard en la red -->
+    <Property Id="DASHBOARD_SERVER_IP" Value="192.168.18.30" />
 
     <!-- ─── Estructura de directorios ─────────────────────────────────────────────── -->
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -110,7 +117,10 @@
         <CreateFolder />
         <Environment Id="EnvHost" Action="set" Name="GATEWAY_HOST" Value="[GATEWAY_HOST]" System="yes" Part="all" />
         <Environment Id="EnvPort" Action="set" Name="GATEWAY_PORT" Value="[GATEWAY_PORT]" System="yes" Part="all" />
-        <Environment Id="EnvWazuh" Action="set" Name="WAZUH_API_URL" Value="[WAZUH_API_URL]" System="yes" Part="all" />
+        <Environment Id="EnvWazuh" Action="set" Name="WAZUH_API_URL" Value="https://[GATEWAY_SERVER_IP]:55000" System="yes" Part="all" />
+        <Environment Id="EnvRpc" Action="set" Name="ETH_RPC_URL" Value="http://[GATEWAY_SERVER_IP]:8545" System="yes" Part="all" />
+        <Environment Id="EnvAudit" Action="set" Name="CONTRACT_SECURITY_AUDIT" Value="[CONTRACT_SECURITY_AUDIT]" System="yes" Part="all" />
+        <Environment Id="EnvRegistry" Action="set" Name="CONTRACT_ALERT_REGISTRY" Value="[CONTRACT_ALERT_REGISTRY]" System="yes" Part="all" />
         <Environment Id="EnvAbuse" Action="set" Name="ABUSEIPDB_API_KEY" Value="[ABUSEIPDB_API_KEY]" System="yes" Part="all" />
         <Environment Id="EnvVT" Action="set" Name="VIRUSTOTAL_API_KEY" Value="[VIRUSTOTAL_API_KEY]" System="yes" Part="all" />
         <Environment Id="EnvGrey" Action="set" Name="GREYNOISE_API_KEY" Value="[GREYNOISE_API_KEY]" System="yes" Part="all" />
@@ -180,7 +190,7 @@
 
   <Fragment>
     <UI>
-    <!-- ── Pantalla informativa (usuario final, sin parametros) ──── -->
+    <!-- ── Pantalla informativa (usuario final, con IP central) ──── -->
     <Dialog Id="GatewayConfigDlg" Width="370" Height="270"
             Title="CyberSec Gateway - Instalacion">
 
@@ -192,21 +202,23 @@
       <!-- Linea separadora -->
       <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
 
-      <!-- icono informativo -->
-      <Control Id="InfoIcon" Type="Text" X="20" Y="58" Width="30" Height="30"
-               Text="(*)" />
-
       <!-- Descripcion -->
-      <Control Id="Description" Type="Text" X="58" Y="58" Width="292" Height="80"
-               Text="El instalador desplegara el servicio {\b}Cybersec Gateway{\b} con configuracion predeterminada.&#10;&#10;No es necesario ingresar ningun valor. El servicio arrancara automaticamente en el puerto {\b}8080{\b}." />
+      <Control Id="Description" Type="Text" X="20" Y="55" Width="330" Height="30"
+               Text="El instalador desplegara el servicio Cybersec Gateway conectado al servidor central de la red LAN." />
+
+      <!-- IP Servidor Central Input -->
+      <Control Id="LabelServerIp" Type="Text" X="20" Y="95" Width="120" Height="14"
+               Text="IP del Servidor Central:" />
+      <Control Id="EditServerIp" Type="Edit" X="145" Y="92" Width="205" Height="18"
+               Property="GATEWAY_SERVER_IP" />
 
       <!-- Linea de detalles tecnicos -->
-      <Control Id="TechDetails" Type="Text" X="20" Y="148" Width="330" Height="60"
-               Text="{\WixUI_Font_Normal}+  Servicio Windows - inicio automatico&#10;+  API REST disponible en http://localhost:8080&#10;+  WebSocket en ws://localhost:8080/ws/alerts&#10;+  Dashboard en http://localhost:5173" />
+      <Control Id="TechDetails" Type="Text" X="20" Y="130" Width="330" Height="80"
+               Text="{\WixUI_Font_Normal}El gateway se configurara con los siguientes parametros:&#10;+  Servicio Windows - inicio automatico&#10;+  API REST local en http://localhost:8080&#10;+  Wazuh API en https://[GATEWAY_SERVER_IP]:55000&#10;+  Blockchain en http://[GATEWAY_SERVER_IP]:8545" />
 
       <!-- Nota para administradores -->
       <Control Id="AdminNote" Type="Text" X="20" Y="215" Width="330" Height="18"
-               Text="(!) Administradores: use SHOW_ADVANCED=1 para configuracion personalizada." />
+               Text="(!) Administradores: use SHOW_ADVANCED=1 para configuracion avanzada." />
 
       <!-- Linea separadora inferior -->
       <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />

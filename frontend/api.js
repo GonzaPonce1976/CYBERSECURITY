@@ -27,6 +27,7 @@ async function request(path, options = {}) {
 export const api = {
   // Health
   health: () => request('/api/health'),
+  checkBlockchain: () => request('/api/health/blockchain'),
 
   // Alerts
   getAlerts: (params = {}) => {

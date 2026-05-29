@@ -550,16 +550,13 @@ function setBadge(id, online, label) {
 
 async function checkBlockchain() {
   try {
-    const res = await fetch('http://localhost:8545', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
-    });
-    const json = await res.json();
-    const block = parseInt(json.result, 16);
-    return { online: true, block };
+    const data = await api.checkBlockchain();
+    if (data.online) {
+      return { online: true, block: parseInt(data.block, 10), contract: data.contract };
+    }
+    return { online: false, block: null, contract: null };
   } catch {
-    return { online: false, block: null };
+    return { online: false, block: null, contract: null };
   }
 }
 
@@ -597,7 +594,7 @@ async function refreshServicesView() {
   setBadge('svc-blockchain-badge', chain.online, chain.online ? 'Mining' : 'Offline');
   $('svc-chain-network').textContent = chain.online ? 'Hardhat / Anvil — Chain 31337' : '—';
   $('svc-chain-block').textContent   = chain.block != null ? `#${chain.block}` : '—';
-  const contractAddr = import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
+  const contractAddr = chain.contract || import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
   $('svc-chain-contract').textContent = contractAddr
     ? contractAddr.slice(0, 8) + '…' + contractAddr.slice(-6)
     : '⚠️ No desplegado';
@@ -644,10 +641,26 @@ async function init() {
   // Audit cuando se cambia a esa vista
   document.getElementById('nav-audit')?.addEventListener('click', loadAuditTrail);
 
-  // Contrato en audit stats
-  const contractAddr = import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
-  if (contractAddr) {
-    $('audit-contract').textContent = contractAddr.slice(0, 10) + '…';
+  // Contrato SecurityAudit — mostrar dirección dinámica real del gateway al iniciar
+  try {
+    const chain = await checkBlockchain();
+    const contractAddr = chain.contract || import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
+    const auditContractEl = $('audit-contract');
+    if (auditContractEl) {
+      if (contractAddr && contractAddr.startsWith('0x') && contractAddr.length === 42) {
+        // Mostrar dirección abreviada con tooltip de la dirección completa
+        auditContractEl.textContent = contractAddr.slice(0, 6) + '…' + contractAddr.slice(-4);
+        auditContractEl.title = contractAddr;
+        auditContractEl.style.cursor = 'help';
+        auditContractEl.style.color = 'var(--cyan, #00d4ff)';
+      } else {
+        auditContractEl.textContent = 'No desplegado';
+        auditContractEl.style.color = 'var(--yellow, #ffd700)';
+        auditContractEl.style.fontSize = '14px';
+      }
+    }
+  } catch (e) {
+    console.error("No se pudo obtener el contrato dinámico de la blockchain:", e);
   }
 }
 

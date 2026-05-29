@@ -67,7 +67,7 @@ async fn get_alert(
 
 async fn receive_webhook(
     State(state): State<Arc<AppState>>,
-    axum::extract::Json(payload): axum::extract::Json<Value>,
+    axum::extract::Json(mut payload): axum::extract::Json<Value>,
 ) -> Json<Value> {
     // Asignar un ID único a la alerta si no lo trae
     let alert_id = payload.get("id")
