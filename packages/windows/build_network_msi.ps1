@@ -8,10 +8,7 @@ $WixObj    = Join-Path $ScriptDir "gateway-installer-network.wixobj"
 $OutputMsi = Join-Path $ScriptDir "cybersec-gateway-network.msi"
 
 Write-Host "=== CyberSec Gateway - MSI Red LAN ===" -ForegroundColor Cyan
-# Leer IP del servidor desde el WXS para mostrarla correctamente
-$serverIpMatch = Select-String -Path $WxsFile -Pattern 'GATEWAY_SERVER_IP.*Value="([^"]+)"' | Select-Object -First 1
-$serverIp = if ($serverIpMatch) { $serverIpMatch.Matches[0].Groups[1].Value } else { "192.168.18.30" }
-Write-Host "Servidor destino: $serverIp" -ForegroundColor Cyan
+Write-Host "Servidor destino: 192.168.125.89" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path $Candle)) { throw "candle.exe no encontrado" }
