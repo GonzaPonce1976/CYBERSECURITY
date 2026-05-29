@@ -8,7 +8,7 @@ $WixObj    = Join-Path $ScriptDir "gateway-installer-network.wixobj"
 $OutputMsi = Join-Path $ScriptDir "cybersec-gateway-network.msi"
 
 Write-Host "=== CyberSec Gateway - MSI Red LAN ===" -ForegroundColor Cyan
-Write-Host "Servidor destino: 192.168.18.30" -ForegroundColor Cyan
+Write-Host "Servidor destino: 192.168.125.89" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path $Candle)) { throw "candle.exe no encontrado" }
@@ -34,7 +34,7 @@ Write-Host ""
 
 Write-Host "[1/2] candle.exe compilando WXS..." -ForegroundColor Yellow
 & $Candle -nologo $WxsFile -out $WixObj -ext WixUtilExtension -ext WixUIExtension `
-    -dCONTRACT_SECURITY_AUDIT=$AuditAddr -dCONTRACT_ALERT_REGISTRY=$RegistryAddr
+    "-dCONTRACT_SECURITY_AUDIT=$AuditAddr" "-dCONTRACT_ALERT_REGISTRY=$RegistryAddr"
 if ($LASTEXITCODE -ne 0) { Write-Host "FALLO candle" -ForegroundColor Red; exit 1 }
 Write-Host "      OK" -ForegroundColor Gray
 
