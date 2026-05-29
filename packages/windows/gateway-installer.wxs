@@ -43,6 +43,8 @@
     <Property Id="DASHBOARD_PORT" Value="5173" />
     <!-- IP del dashboard en la red -->
     <Property Id="DASHBOARD_SERVER_IP" Value="192.168.125.89" />
+    <!-- URL del gateway central al que este sensor reenvía todas las alertas -->
+    <Property Id="CENTRAL_GATEWAY_URL" Value="http://192.168.125.89:8080" />
 
     <!-- ─── Estructura de directorios ─────────────────────────────────────────────── -->
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -121,6 +123,7 @@
         <Environment Id="EnvRpc" Action="set" Name="ETH_RPC_URL" Value="http://[GATEWAY_SERVER_IP]:8545" System="yes" Part="all" />
         <Environment Id="EnvAudit" Action="set" Name="CONTRACT_SECURITY_AUDIT" Value="[CONTRACT_SECURITY_AUDIT]" System="yes" Part="all" />
         <Environment Id="EnvRegistry" Action="set" Name="CONTRACT_ALERT_REGISTRY" Value="[CONTRACT_ALERT_REGISTRY]" System="yes" Part="all" />
+        <Environment Id="EnvCentralGw" Action="set" Name="CENTRAL_GATEWAY_URL" Value="http://[GATEWAY_SERVER_IP]:8080" System="yes" Part="all" />
         <Environment Id="EnvAbuse" Action="set" Name="ABUSEIPDB_API_KEY" Value="[ABUSEIPDB_API_KEY]" System="yes" Part="all" />
         <Environment Id="EnvVT" Action="set" Name="VIRUSTOTAL_API_KEY" Value="[VIRUSTOTAL_API_KEY]" System="yes" Part="all" />
         <Environment Id="EnvGrey" Action="set" Name="GREYNOISE_API_KEY" Value="[GREYNOISE_API_KEY]" System="yes" Part="all" />
@@ -214,7 +217,7 @@
 
       <!-- Linea de detalles tecnicos -->
       <Control Id="TechDetails" Type="Text" X="20" Y="130" Width="330" Height="80"
-               Text="{\WixUI_Font_Normal}El gateway se configurara con los siguientes parametros:&#10;+  Servicio Windows - inicio automatico&#10;+  API REST local en http://localhost:8080&#10;+  Wazuh API en https://[GATEWAY_SERVER_IP]:55000&#10;+  Blockchain en http://[GATEWAY_SERVER_IP]:8545" />
+               Text="{\WixUI_Font_Normal}El gateway se configurara con los siguientes parametros:&#10;+  Servicio Windows - inicio automatico&#10;+  API REST local en http://localhost:8080&#10;+  Wazuh API en https://[GATEWAY_SERVER_IP]:55000&#10;+  Blockchain en http://[GATEWAY_SERVER_IP]:8545&#10;+  Forwarding SOC a http://[GATEWAY_SERVER_IP]:8080" />
 
       <!-- Nota para administradores -->
       <Control Id="AdminNote" Type="Text" X="20" Y="215" Width="330" Height="18"

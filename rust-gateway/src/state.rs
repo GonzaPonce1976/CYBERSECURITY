@@ -39,6 +39,9 @@ pub struct AppState {
     /// Pool de conexiones a base de datos SQLite para persistencia
     pub db_pool: Pool<SqliteConnectionManager>,
 
+    /// Cliente HTTP reutilizable (conexiones pooled)
+    pub http_client: reqwest::Client,
+
     /// Clientes de APIs externas
     pub abuseipdb: Arc<AbuseIpDbClient>,
     pub greynoise: Arc<GreyNoiseClient>,
@@ -61,6 +64,10 @@ pub struct AppState {
     pub deployer_private_key: String,
     pub contract_security_audit: String,
     pub contract_alert_registry: String,
+
+    /// URL del gateway central para forwarding (modo sensor/relay).
+    /// Si está vacía, este gateway opera como servidor central (sin forwarding).
+    pub central_gateway_url: Option<String>,
 
     /// Timestamp de inicio del gateway
     pub started_at: DateTime<Utc>,
@@ -112,11 +119,24 @@ impl AppState {
         let contract_security_audit = std::env::var("CONTRACT_SECURITY_AUDIT").unwrap_or_default();
         let contract_alert_registry = std::env::var("CONTRACT_ALERT_REGISTRY").unwrap_or_default();
 
+        // Modo SOC Hub: si CENTRAL_GATEWAY_URL está definida, este gateway actúa
+        // como sensor/relay y reenvía todas las alertas al servidor central.
+        let central_gateway_url = std::env::var("CENTRAL_GATEWAY_URL")
+            .ok()
+            .filter(|u| !u.trim().is_empty());
+
+        if let Some(ref url) = central_gateway_url {
+            tracing::info!("🔀 Modo SENSOR activo — forwarding de alertas a: {}", url);
+        } else {
+            tracing::info!("🏛️  Modo SERVIDOR CENTRAL — este gateway es el hub SOC");
+        }
+
         let mut state = Self {
             alerts_cache: DashMap::new(),
             ip_cache: DashMap::new(),
             cve_cache: DashMap::new(),
             db_pool,
+            http_client,
             abuseipdb,
             greynoise,
             virustotal,
@@ -132,6 +152,7 @@ impl AppState {
             deployer_private_key,
             contract_security_audit,
             contract_alert_registry,
+            central_gateway_url,
             started_at: Utc::now(),
         };
 

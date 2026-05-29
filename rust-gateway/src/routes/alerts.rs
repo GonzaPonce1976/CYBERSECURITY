@@ -78,6 +78,14 @@ async fn receive_webhook(
     payload["id"] = json!(alert_id);
     payload["received_at"] = json!(chrono::Utc::now().to_rfc3339());
 
+    // Enriquecer con hostname del agente origen si no viene indicado
+    if payload.get("source_agent").is_none() {
+        let hostname = hostname::get()
+            .map(|h| h.to_string_lossy().to_string())
+            .unwrap_or_else(|_| "unknown-endpoint".to_string());
+        payload["source_agent"] = json!(hostname);
+    }
+
     // Intentar deserializar directamente a Alert; si falla construir uno mínimo
     let alert = match serde_json::from_value::<crate::models::alert::Alert>(payload.clone()) {
         Ok(a) => a,
@@ -112,10 +120,10 @@ async fn receive_webhook(
         }
     };
 
-    // Insertar en caché con el tipo correcto
+    // Insertar en caché local
     state.alerts_cache.insert(alert_id.clone(), alert);
 
-    // Intentar guardar en la DB (ignorar errores en caso de no DB)
+    // Persistir en DB local
     if let Ok(conn) = state.db_pool.get() {
         let data_str = serde_json::to_string(&payload).unwrap_or_default();
         let created_at = chrono::Utc::now().to_rfc3339();
@@ -127,9 +135,41 @@ async fn receive_webhook(
 
     tracing::info!("🔔 Nueva alerta recibida vía Webhook: {}", alert_id);
 
+    // ── SOC Hub Forwarding ────────────────────────────────────────────────
+    // Si CENTRAL_GATEWAY_URL está configurada, reenviar la alerta al servidor
+    // central de forma asíncrona (no bloquea la respuesta al cliente).
+    if let Some(central_url) = &state.central_gateway_url {
+        let forward_url = format!("{}/api/alerts/webhook", central_url.trim_end_matches('/'));
+        let client = state.http_client.clone();
+        let body = payload.clone();
+        let fwd_url = forward_url.clone();
+
+        tokio::spawn(async move {
+            match client
+                .post(&fwd_url)
+                .json(&body)
+                .timeout(std::time::Duration::from_secs(5))
+                .send()
+                .await
+            {
+                Ok(resp) if resp.status().is_success() => {
+                    tracing::info!("✅ Alerta reenviada al hub SOC: {}", fwd_url);
+                }
+                Ok(resp) => {
+                    tracing::warn!("⚠️  Hub SOC respondió con error {}: {}", resp.status(), fwd_url);
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️  No se pudo reenviar alerta al hub SOC {}: {}", fwd_url, e);
+                }
+            }
+        });
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     Json(json!({
         "status": "ok",
         "message": "Alerta recibida exitosamente",
         "alert_id": alert_id
     }))
 }
+

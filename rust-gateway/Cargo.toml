@@ -48,6 +48,9 @@ thiserror = "2"
 # Base64 para encoding de tokens JWT de Wazuh
 base64 = "0.22"
 
+# Obtener hostname del sistema (identificación del agente sensor)
+hostname = "0.4"
+
 # Base de datos SQLite con pool de conexiones
 r2d2 = "0.8"
 r2d2_sqlite = "0.25"
