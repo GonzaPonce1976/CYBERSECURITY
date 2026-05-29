@@ -27,10 +27,10 @@
     <Property Id="SHOW_ADVANCED"    Value="0" />
     <Property Id="GATEWAY_HOST"     Value="0.0.0.0" />
     <Property Id="GATEWAY_PORT"     Value="8080" />
-    <!-- IP del servidor principal en la red LAN -->
-    <Property Id="WAZUH_API_URL"    Value="https://192.168.125.89:55000" />
-    <Property Id="GATEWAY_SERVER_IP" Value="192.168.125.89" />
-    <Property Id="ETH_RPC_URL"      Value="http://192.168.125.89:8545" />
+    <!-- IP del servidor principal en la red LAN (Ethernet: 192.168.18.30 | WiFi: 192.168.18.94) -->
+    <Property Id="WAZUH_API_URL"    Value="https://192.168.18.30:55000" />
+    <Property Id="GATEWAY_SERVER_IP" Value="192.168.18.30" />
+    <Property Id="ETH_RPC_URL"      Value="http://192.168.18.30:8545" />
     <Property Id="CONTRACT_SECURITY_AUDIT" Value="$(var.CONTRACT_SECURITY_AUDIT)" />
     <Property Id="CONTRACT_ALERT_REGISTRY" Value="$(var.CONTRACT_ALERT_REGISTRY)" />
     <Property Id="ABUSEIPDB_API_KEY"  Secure="yes" />
@@ -41,10 +41,10 @@
 
     <!-- Puerto del frontend (solo informativo, no configura nada) -->
     <Property Id="DASHBOARD_PORT" Value="5173" />
-    <!-- IP del dashboard en la red -->
-    <Property Id="DASHBOARD_SERVER_IP" Value="192.168.125.89" />
+    <!-- IP del dashboard en la red (IP real del servidor: 192.168.18.30 Ethernet / 192.168.18.94 WiFi) -->
+    <Property Id="DASHBOARD_SERVER_IP" Value="192.168.18.30" />
     <!-- URL del gateway central al que este sensor reenvía todas las alertas -->
-    <Property Id="CENTRAL_GATEWAY_URL" Value="http://192.168.125.89:8080" />
+    <Property Id="CENTRAL_GATEWAY_URL" Value="http://192.168.18.30:8080" />
 
     <!-- ─── Estructura de directorios ─────────────────────────────────────────────── -->
     <Directory Id="TARGETDIR" Name="SourceDir">
