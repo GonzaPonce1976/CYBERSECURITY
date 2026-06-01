@@ -8,7 +8,7 @@ $WixObj    = Join-Path $ScriptDir "gateway-installer-network.wixobj"
 $OutputMsi = Join-Path $ScriptDir "cybersec-gateway-network.msi"
 
 Write-Host "=== CyberSec Gateway - MSI Red LAN ===" -ForegroundColor Cyan
-Write-Host "Servidor destino: 192.168.125.89" -ForegroundColor Cyan
+Write-Host "Servidor destino: 192.168.125.250" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path $Candle)) { throw "candle.exe no encontrado" }

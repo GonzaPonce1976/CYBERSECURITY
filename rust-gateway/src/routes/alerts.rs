@@ -11,6 +11,14 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use crate::state::AppState;
 
+/// Obtiene la IP local (LAN) principal de esta máquina
+fn get_local_ip() -> Option<String> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    let local_addr = socket.local_addr().ok()?;
+    Some(local_addr.ip().to_string())
+}
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(list_alerts))
@@ -67,6 +75,7 @@ async fn get_alert(
 
 async fn receive_webhook(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     axum::extract::Json(mut payload): axum::extract::Json<Value>,
 ) -> Json<Value> {
     // Asignar un ID único a la alerta si no lo trae
@@ -77,6 +86,54 @@ async fn receive_webhook(
 
     payload["id"] = json!(alert_id);
     payload["received_at"] = json!(chrono::Utc::now().to_rfc3339());
+
+    // Obtener la IP del remitente desde cabeceras HTTP de proxy/red
+    let mut remote_ip = headers
+        .get("x-real-ip")
+        .and_then(|v| v.to_str().ok())
+        .or_else(|| {
+            headers
+                .get("x-forwarded-for")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.split(',').next())
+        })
+        .map(|s| s.trim().to_string());
+
+    // Si la IP de conexión es loopback/local, resolver a la IP LAN real de esta máquina
+    if let Some(ref ip) = remote_ip {
+        if ip == "127.0.0.1" || ip == "::1" || ip == "localhost" {
+            if let Some(local_lan) = get_local_ip() {
+                remote_ip = Some(local_lan);
+            }
+        }
+    } else {
+        remote_ip = get_local_ip();
+    }
+
+    // Enriquecer con la IP del agente si no viene explícita
+    if payload.get("agent_ip").is_none() {
+        let extracted_agent_ip = payload.get("agent")
+            .and_then(|a| a.get("ip"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .or_else(|| remote_ip.clone())
+            .or_else(|| {
+                payload.get("src_ip")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .map(|ip| {
+                        if ip == "127.0.0.1" || ip == "localhost" {
+                            get_local_ip().unwrap_or(ip)
+                        } else {
+                            ip
+                        }
+                    })
+            });
+        
+        if let Some(ip) = extracted_agent_ip {
+            payload["agent_ip"] = json!(ip);
+        }
+    }
 
     // Enriquecer con hostname del agente origen si no viene indicado
     if payload.get("source_agent").is_none() {
@@ -117,6 +174,7 @@ async fn receive_webhook(
             a.src_ip = payload.get("src_ip").and_then(|v| v.as_str()).map(|s| s.to_string());
             a.agent_name = payload.get("agent_name").and_then(|v| v.as_str()).map(|s| s.to_string());
             a.source_agent = payload.get("source_agent").and_then(|v| v.as_str()).map(|s| s.to_string());
+            a.agent_ip = payload.get("agent_ip").and_then(|v| v.as_str()).map(|s| s.to_string());
             a
         }
     };

@@ -52,6 +52,7 @@ function createDemoAlert() {
     description,
     src_ip: `${10 + (i % 240)}.${20 + (i % 200)}.${i % 255}.${100 + (i % 100)}`,
     agent_name,
+    agent_ip: i === 0 ? "192.168.125.250" : `192.168.125.${20 + (i % 200)}`,
     mitre_tactics: [randomItem(DEMO_TACTICS)],
     timestamp,
     on_chain: i % 4 === 0,
@@ -291,8 +292,11 @@ function renderAlertsRows(containerId, alerts) {
               ${(() => {
                 const host = a.source_agent || a.agent_name;
                 const sub  = (a.source_agent && a.agent_name && a.source_agent !== a.agent_name) ? a.agent_name : null;
+                const ip   = a.agent_ip;
                 return host
-                  ? `<span class="agent-host" title="Equipo: ${host}">&#x1F4BB; ${host}</span>${sub ? `<br><span class="agent-sub">${sub}</span>` : ''}`
+                  ? `<span class="agent-host" title="Equipo: ${host}">&#x1F4BB; ${host}</span>
+                     ${ip ? `<br><span class="agent-ip" title="IP: ${ip}">&#x1F310; ${ip}</span>` : ''}
+                     ${sub ? `<br><span class="agent-sub">${sub}</span>` : ''}`
                   : '<span class="text-muted">—</span>';
               })()}
             </td>
@@ -316,7 +320,8 @@ function renderAlertsTable() {
       (a.description || '').toLowerCase().includes(search) ||
       (a.src_ip || '').toLowerCase().includes(search) ||
       (a.agent_name || '').toLowerCase().includes(search) ||
-      (a.source_agent || '').toLowerCase().includes(search);
+      (a.source_agent || '').toLowerCase().includes(search) ||
+      (a.agent_ip || '').toLowerCase().includes(search);
     return matchSev && matchSearch;
   });
 

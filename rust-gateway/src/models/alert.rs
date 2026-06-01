@@ -77,6 +77,9 @@ pub struct Alert {
     /// Poblado automáticamente por el gateway sensor al hacer forwarding
     pub source_agent: Option<String>,
 
+    /// IP del agente/dispositivo que reporta la telemetría
+    pub agent_ip: Option<String>,
+
     /// Tipo de evento: "intrusion", "malware", "anomaly", "compliance"
     pub event_type: String,
 
@@ -117,6 +120,7 @@ impl Alert {
             dst_ip: None,
             agent_name: None,
             source_agent: None,
+            agent_ip: None,
             event_type,
             mitre_tactics: vec![],
             mitre_techniques: vec![],

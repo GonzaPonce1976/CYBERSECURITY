@@ -183,6 +183,7 @@ impl WazuhClient {
         alert.rule_id = raw.rule.as_ref().and_then(|r| r.id.clone());
         alert.src_ip = raw.src_ip;
         alert.agent_name = raw.agent.as_ref().and_then(|a| a.name.clone());
+        alert.agent_ip = raw.agent.as_ref().and_then(|a| a.ip.clone());
 
         if let Some(rule) = &raw.rule {
             if let Some(mitre) = &rule.mitre {

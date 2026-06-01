@@ -1,6 +1,6 @@
 {
   "network": "localhost",
-  "deployedAt": "2026-05-29T11:58:21.355Z",
+  "deployedAt": "2026-06-01T12:06:13.188Z",
   "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
   "contracts": {
     "SecurityAudit": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
