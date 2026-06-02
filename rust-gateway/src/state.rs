@@ -16,6 +16,7 @@ use crate::clients::{
     virustotal::VirusTotalClient,
     nvd::NvdClient,
     otx::OtxClient,
+    shodan::ShodanClient,
 };
 
 fn valid_api_key(key: &str) -> bool {
@@ -48,6 +49,7 @@ pub struct AppState {
     pub virustotal: Arc<VirusTotalClient>,
     pub nvd: Arc<NvdClient>,
     pub otx: Arc<OtxClient>,
+    pub shodan: Arc<ShodanClient>,
 
     /// Configuración de Wazuh (mantenidas para health check)
     pub wazuh_url: String,
@@ -57,6 +59,7 @@ pub struct AppState {
     pub virustotal_key: String,
     pub greynoise_key: String,
     pub otx_key: String,
+    pub shodan_key: String,
     pub nvd_key: Option<String>,
 
     /// Configuración de Blockchain
@@ -104,6 +107,7 @@ impl AppState {
         let virustotal_key = std::env::var("VIRUSTOTAL_API_KEY").unwrap_or_default();
         let greynoise_key = std::env::var("GREYNOISE_API_KEY").unwrap_or_default();
         let otx_key = std::env::var("OTX_API_KEY").unwrap_or_default();
+        let shodan_key = std::env::var("SHODAN_API_KEY").unwrap_or_default();
         let nvd_key = std::env::var("NVD_API_KEY").ok().filter(|k| valid_api_key(k));
 
         let abuseipdb = Arc::new(AbuseIpDbClient::new(http_client.clone(), abuseipdb_key.clone()));
@@ -111,6 +115,7 @@ impl AppState {
         let virustotal = Arc::new(VirusTotalClient::new(http_client.clone(), virustotal_key.clone()));
         let nvd = Arc::new(NvdClient::new(http_client.clone(), nvd_key.clone()));
         let otx = Arc::new(OtxClient::new(http_client.clone(), otx_key.clone()));
+        let shodan = Arc::new(ShodanClient::new(http_client.clone(), shodan_key.clone()));
 
         let eth_rpc_url = std::env::var("ETH_RPC_URL")
             .unwrap_or_else(|_| "http://localhost:8545".to_string());
@@ -142,11 +147,13 @@ impl AppState {
             virustotal,
             nvd,
             otx,
+            shodan,
             wazuh_url,
             abuseipdb_key,
             virustotal_key,
             greynoise_key,
             otx_key,
+            shodan_key,
             nvd_key,
             eth_rpc_url,
             deployer_private_key,

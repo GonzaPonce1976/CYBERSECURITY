@@ -24,14 +24,15 @@ async fn ip_reputation(
         }));
     }
 
-    info!("🌐 Consultando reputación de IP {} en paralelo (AbuseIPDB + VirusTotal + GreyNoise + OTX)", ip);
+    info!("🌐 Consultando reputación de IP {} en paralelo (AbuseIPDB + VirusTotal + GreyNoise + OTX + Shodan)", ip);
 
-    // Consultar las cuatro APIs en paralelo con tokio::join!
-    let (abuse_result, virustotal_result, greynoise_result, otx_result) = tokio::join!(
+    // Consultar las cinco APIs en paralelo con tokio::join!
+    let (abuse_result, virustotal_result, greynoise_result, otx_result, shodan_result) = tokio::join!(
         state.abuseipdb.check_ip(&ip),
         state.virustotal.check_ip(&ip),
         state.greynoise.check_ip(&ip),
         state.otx.check_ip(&ip),
+        state.shodan.check_ip(&ip),
     );
 
     let abuse = match abuse_result {
@@ -84,12 +85,25 @@ async fn ip_reputation(
         Err(e) => json!({ "error": e.to_string() }),
     };
 
+    let shodan = match shodan_result {
+        Ok(data) => json!({
+            "ports": data.ports,
+            "isp": data.isp,
+            "os": data.os,
+            "org": data.org,
+            "country": data.country,
+            "vulnerabilities": data.vulnerabilities,
+        }),
+        Err(e) => json!({ "error": e.to_string() }),
+    };
+
     let result = json!({
         "ip": ip,
         "abuseipdb": abuse,
         "virustotal": virustotal,
         "greynoise": greynoise,
         "otx": otx,
+        "shodan": shodan,
     });
 
     // Guardar en cache y base de datos

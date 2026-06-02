@@ -6,3 +6,4 @@ pub mod greynoise;
 pub mod virustotal;
 pub mod nvd;
 pub mod otx;
+pub mod shodan;

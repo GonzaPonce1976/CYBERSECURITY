@@ -392,6 +392,7 @@ function renderIpResult(ip, data) {
   const vt = data.virustotal || {};
   const gn = data.greynoise || {};
   const otx = data.otx || {};
+  const shodan = data.shodan || {};
 
   grid.innerHTML = `
     <div class="ip-source-card">
@@ -432,6 +433,16 @@ function renderIpResult(ip, data) {
         ${row('País', otx.country || '—')}
         ${row('Familias', (otx.malware_families || []).join(', ') || '—')}
         ${row('MITRE IDs', (otx.mitre_attack_ids || []).join(', ') || '—')}
+      `}
+    </div>
+    <div class="ip-source-card">
+      <div class="ip-source-title">🎯 Shodan Exposición</div>
+      ${shodan.error ? sourceErrorRow(shodan.error) : `
+        ${row('Exposición', shodan.ports && shodan.ports.length > 0 ? '<span style="color:var(--red);font-weight:bold">🚨 Expuesto</span>' : '<span style="color:var(--green);font-weight:bold">✅ Seguro</span>')}
+        ${row('Puertos Abiertos', shodan.ports && shodan.ports.length > 0 ? shodan.ports.map(p => `<span style="background:rgba(255,58,92,0.15);color:#ff3a5c;border:1px solid rgba(255,58,92,0.3);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:0.75rem;margin-right:4px;font-weight:bold">${p}</span>`).join(' ') : 'Ninguno')}
+        ${row('OS Detectado', shodan.os || 'No detectado')}
+        ${row('Organización', shodan.org || '—')}
+        ${row('Vulnerabilidades', shodan.vulnerabilities && shodan.vulnerabilities.length > 0 ? shodan.vulnerabilities.map(v => `<span style="background:rgba(255,123,0,0.15);color:#ff7b00;border:1px solid rgba(255,123,0,0.3);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:0.75rem;margin-right:4px;font-weight:bold" title="${v}">${v}</span>`).join(' ') : 'Ninguna')}
       `}
     </div>
   `;
