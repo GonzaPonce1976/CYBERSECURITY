@@ -38,6 +38,7 @@ export const api = {
 
   // IP Reputation
   checkIp: (ip) => request(`/api/ip/${ip}/reputation`),
+  getExposures: () => request('/api/ip/exposures'),
 
   // CVE
   getCve: (cveId) => request(`/api/cve/${cveId}`),

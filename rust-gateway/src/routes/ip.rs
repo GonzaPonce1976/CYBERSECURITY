@@ -8,7 +8,9 @@ use tracing::{error, info};
 use crate::state::AppState;
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/{ip}/reputation", get(ip_reputation))
+    Router::new()
+        .route("/exposures", get(list_exposures))
+        .route("/{ip}/reputation", get(ip_reputation))
 }
 
 async fn ip_reputation(
@@ -116,5 +118,54 @@ async fn ip_reputation(
         "status": "ok",
         "source": "live",
         "data": result
+    }))
+}
+
+async fn list_exposures(
+    State(state): State<Arc<AppState>>,
+) -> Json<Value> {
+    let conn = match state.db_pool.get() {
+        Ok(c) => c,
+        Err(e) => return Json(json!({ "status": "error", "message": e.to_string() })),
+    };
+
+    let mut stmt = match conn.prepare("SELECT ip, data, created_at FROM ip_cache ORDER BY created_at DESC") {
+        Ok(s) => s,
+        Err(e) => return Json(json!({ "status": "error", "message": e.to_string() })),
+    };
+
+    let ip_iter = match stmt.query_map([], |row| {
+        let ip: String = row.get(0)?;
+        let data_str: String = row.get(1)?;
+        let created_at: String = row.get(2)?;
+        Ok((ip, data_str, created_at))
+    }) {
+        Ok(i) => i,
+        Err(e) => return Json(json!({ "status": "error", "message": e.to_string() })),
+    };
+
+    let mut exposures = Vec::new();
+    for result in ip_iter {
+        if let Ok((_ip, data_str, created_at)) = result {
+            if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                if let Some(shodan) = value.get("shodan") {
+                    let has_ports = shodan.get("ports").and_then(|p| p.as_array()).map(|a| !a.is_empty()).unwrap_or(false);
+                    let has_vulns = shodan.get("vulnerabilities").and_then(|v| v.as_array()).map(|a| !a.is_empty()).unwrap_or(false);
+                    
+                    if has_ports || has_vulns {
+                        // Inject scanned_at timestamp
+                        if let Some(obj) = value.as_object_mut() {
+                            obj.insert("scanned_at".to_string(), json!(created_at));
+                        }
+                        exposures.push(value);
+                    }
+                }
+            }
+        }
+    }
+
+    Json(json!({
+        "status": "ok",
+        "data": exposures
     }))
 }

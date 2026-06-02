@@ -348,6 +348,96 @@ function initIpView() {
   });
 }
 
+async function loadPerimetralExposures() {
+  const tbody = $('exposures-tbody');
+  const countBadge = $('exposures-count-badge');
+  if (!tbody) return;
+
+  try {
+    const data = await api.getExposures();
+    const exposures = data.data || [];
+    
+    if (countBadge) {
+      countBadge.textContent = exposures.length;
+    }
+
+    if (!exposures.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty-state">
+            <div class="empty-icon">🛡️</div>
+            <p>No se encontraron IP expuestas en el historial perimetral.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = exposures.map(exp => {
+      const shodan = exp.shodan || {};
+      const ip = exp.ip || '—';
+      const os = shodan.os || '—';
+      const org = shodan.org || shodan.isp || '—';
+      const osOrg = os !== '—' && org !== '—' ? `${os} / ${org}` : os !== '—' ? os : org;
+      
+      const ports = shodan.ports || [];
+      const portsHtml = ports.length > 0 
+        ? ports.map(p => `<span class="exposure-port-badge">${p}</span>`).join(' ')
+        : '<span class="text-muted">Ninguno</span>';
+
+      const vulns = shodan.vulnerabilities || [];
+      const vulnsHtml = vulns.length > 0
+        ? vulns.map(v => `<span class="exposure-vuln-badge" title="${v}">${v}</span>`).join(' ')
+        : '<span class="text-muted">Ninguna</span>';
+
+      const dateStr = exp.scanned_at ? new Date(exp.scanned_at).toLocaleString('es') : '—';
+
+      return `
+        <tr>
+          <td><a href="#" class="exposure-ip-link mono" data-ip="${ip}">${ip}</a></td>
+          <td>${portsHtml}</td>
+          <td>${vulnsHtml}</td>
+          <td>${osOrg}</td>
+          <td class="text-muted">${dateStr}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Bind click events to IP links
+    tbody.querySelectorAll('.exposure-ip-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const ip = link.dataset.ip;
+        if (!ip) return;
+
+        // Switch to IP tab
+        const ipNavBtn = $('nav-ip');
+        if (ipNavBtn) {
+          ipNavBtn.click();
+        }
+
+        // Fill input and check
+        const ipInput = $('ip-input');
+        if (ipInput) {
+          ipInput.value = ip;
+          checkIp();
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error('Error cargando auditoría perimetral:', err);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty-state">
+          <div class="empty-icon" style="color:var(--red)">⚠️</div>
+          <p>Error cargando datos de exposición: ${err.message}</p>
+        </td>
+      </tr>
+    `;
+  }
+}
+
 async function checkIp() {
   const ip = $('ip-input')?.value?.trim();
   if (!ip) return;
@@ -359,6 +449,8 @@ async function checkIp() {
   try {
     const data = await api.checkIp(ip);
     renderIpResult(ip, data.data || data);
+    // Refrescar lista de exposiciones en el dashboard
+    loadPerimetralExposures().catch(() => {});
   } catch (err) {
     toast(`Error consultando IP: ${err.message}`, 'error');
   } finally {
@@ -635,6 +727,7 @@ function initServicesView() {
 // ── Refresh ──────────────────────────────────────────────────
 $('btn-refresh')?.addEventListener('click', async () => {
   await loadAlerts();
+  await loadPerimetralExposures().catch(() => {});
   toast('Datos actualizados', 'info', 2000);
 });
 
@@ -655,11 +748,13 @@ async function init() {
   // Datos iniciales
   await checkGatewayHealth();
   await loadAlerts();
+  await loadPerimetralExposures().catch(() => {});
 
   // Auto-refresh cada 30s
   state.refreshInterval = setInterval(async () => {
     await checkGatewayHealth();
     await loadAlerts();
+    await loadPerimetralExposures().catch(() => {});
   }, 30000);
 
   // WebSocket
