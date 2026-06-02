@@ -36,6 +36,7 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> Json<Value> {
             "virustotal": !state.virustotal_key.is_empty(),
             "greynoise": !state.greynoise_key.is_empty(),
             "otx": !state.otx_key.is_empty(),
+            "shodan": !state.shodan_key.is_empty(),
             "nvd": true,
             "nvd_key_present": state.nvd_key.is_some()
         }

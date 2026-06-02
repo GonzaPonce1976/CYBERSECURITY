@@ -603,6 +603,8 @@ async function refreshServicesView() {
     $('svc-gw-version').textContent = h.version ?? '—';
     $('svc-wazuh-cfg').textContent  = apis.wazuh ? '✅ Sí' : '⚠️ No';
     setBadge('svc-wazuh-badge', apis.wazuh, apis.wazuh ? 'Configurado' : 'Sin config');
+    $('svc-shodan-cfg').textContent  = apis.shodan ? '✅ Sí' : '⚠️ No';
+    setBadge('svc-shodan-badge', apis.shodan, apis.shodan ? 'Configurado' : 'Sin config');
   } catch {
     setBadge('svc-gateway-badge', false);
     ['svc-gw-uptime','svc-gw-alerts','svc-gw-ips','svc-gw-apis','svc-gw-version'].forEach(id => { const el=$(id); if(el) el.textContent='—'; });
