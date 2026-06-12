@@ -47,5 +47,12 @@ export const api = {
   getAuditTrail: () => request('/api/audit/trail'),
   logEvent: (payload) => request('/api/audit/log', { method: 'POST', body: JSON.stringify(payload) }),
 
+  // IoC Intelligence — MalwareBazaar (abuse.ch)
+  queryHash:       (sha256) => request(`/api/ioc/hash/${sha256}`),
+  getIocFeed:      ()       => request('/api/ioc/feed/recent'),
+  getIocCorrelate: ()       => request('/api/ioc/correlate'),
+  getUrlhausFeed:  ()       => request('/api/ioc/urlhaus/recent'),
+  getThreatFoxFeed:()       => request('/api/ioc/threatfox/recent'),
+
   BASE: GATEWAY,
 };

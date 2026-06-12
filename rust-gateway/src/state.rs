@@ -17,6 +17,9 @@ use crate::clients::{
     nvd::NvdClient,
     otx::OtxClient,
     shodan::ShodanClient,
+    malwarebazaar::MalwareBazaarClient,
+    urlhaus::UrlhausClient,
+    threatfox::ThreatFoxClient,
 };
 
 fn valid_api_key(key: &str) -> bool {
@@ -50,6 +53,9 @@ pub struct AppState {
     pub nvd: Arc<NvdClient>,
     pub otx: Arc<OtxClient>,
     pub shodan: Arc<ShodanClient>,
+    pub malwarebazaar: Arc<MalwareBazaarClient>,
+    pub urlhaus: Arc<UrlhausClient>,
+    pub threatfox: Arc<ThreatFoxClient>,
 
     /// Configuración de Wazuh (mantenidas para health check)
     pub wazuh_url: String,
@@ -61,6 +67,7 @@ pub struct AppState {
     pub otx_key: String,
     pub shodan_key: String,
     pub nvd_key: Option<String>,
+    pub abusech_key: String,
 
     /// Configuración de Blockchain
     pub eth_rpc_url: String,
@@ -109,6 +116,7 @@ impl AppState {
         let otx_key = std::env::var("OTX_API_KEY").unwrap_or_default();
         let shodan_key = std::env::var("SHODAN_API_KEY").unwrap_or_default();
         let nvd_key = std::env::var("NVD_API_KEY").ok().filter(|k| valid_api_key(k));
+        let abusech_key = std::env::var("ABUSECH_AUTH_KEY").unwrap_or_default();
 
         let abuseipdb = Arc::new(AbuseIpDbClient::new(http_client.clone(), abuseipdb_key.clone()));
         let greynoise = Arc::new(GreyNoiseClient::new(http_client.clone(), greynoise_key.clone()));
@@ -116,6 +124,9 @@ impl AppState {
         let nvd = Arc::new(NvdClient::new(http_client.clone(), nvd_key.clone()));
         let otx = Arc::new(OtxClient::new(http_client.clone(), otx_key.clone()));
         let shodan = Arc::new(ShodanClient::new(http_client.clone(), shodan_key.clone()));
+        let malwarebazaar = Arc::new(MalwareBazaarClient::new(http_client.clone(), abusech_key.clone()));
+        let urlhaus = Arc::new(UrlhausClient::new(http_client.clone(), abusech_key.clone()));
+        let threatfox = Arc::new(ThreatFoxClient::new(http_client.clone(), abusech_key.clone()));
 
         let eth_rpc_url = std::env::var("ETH_RPC_URL")
             .unwrap_or_else(|_| "http://localhost:8545".to_string());
@@ -148,6 +159,9 @@ impl AppState {
             nvd,
             otx,
             shodan,
+            malwarebazaar,
+            urlhaus,
+            threatfox,
             wazuh_url,
             abuseipdb_key,
             virustotal_key,
@@ -155,6 +169,7 @@ impl AppState {
             otx_key,
             shodan_key,
             nvd_key,
+            abusech_key,
             eth_rpc_url,
             deployer_private_key,
             contract_security_audit,

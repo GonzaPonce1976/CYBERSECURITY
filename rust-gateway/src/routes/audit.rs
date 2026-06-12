@@ -27,6 +27,8 @@ alloy::sol! {
             string eventType;      // "INTRUSION", "MALWARE", "ANOMALY", "COMPLIANCE"
             string description;
             bytes32 dataHash;      // SHA256 del payload completo en Rust
+            string malwareFamily;  // Familia de malware (Ej. "Emotet")
+            string[] iocHashes;    // Hashes detectados (Ej. SHA256 de las muestras)
             address reporter;      // Dirección del Rust gateway
             string agentName;      // Nombre del agente Wazuh (opcional)
             string srcIp;          // IP de origen (opcional)
@@ -38,6 +40,8 @@ alloy::sol! {
             string calldata eventType,
             string calldata description,
             bytes32 dataHash,
+            string calldata malwareFamily,
+            string[] calldata iocHashes,
             string calldata agentName,
             string calldata srcIp
         ) external returns (uint256 id);
@@ -60,6 +64,8 @@ pub struct LogEventRequest {
     pub severity: String,
     pub description: String,
     pub alert_id: Option<String>,
+    pub malware_family: Option<String>,
+    pub ioc_hashes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -191,7 +197,9 @@ async fn get_audit_trail(State(state): State<Arc<AppState>>) -> Json<Value> {
                     "severity": severity_str,
                     "event_type": e.eventType,
                     "description": e.description,
-                    "blockchain_tx": Some(data_hash_str)
+                    "blockchain_tx": Some(data_hash_str),
+                    "malware_family": e.malwareFamily,
+                    "ioc_hashes": e.iocHashes
                 }));
             }
 
@@ -292,6 +300,9 @@ async fn log_event(
 
     let agent_name = "".to_string(); // Campos extendibles (opcionales)
     let src_ip = "".to_string();
+    
+    let malware_family = payload.malware_family.clone().unwrap_or_default();
+    let ioc_hashes = payload.ioc_hashes.clone().unwrap_or_default();
 
     tracing::info!("🔗 Enviando evento on-chain a {}...", contract_addr);
 
@@ -301,6 +312,8 @@ async fn log_event(
         payload.event_type.clone(),
         payload.description.clone(),
         data_hash,
+        malware_family,
+        ioc_hashes,
         agent_name,
         src_ip
     ).send().await {
@@ -318,6 +331,8 @@ async fn log_event(
                     "severity": payload.severity,
                     "description": payload.description,
                     "alert_id": payload.alert_id,
+                    "malware_family": payload.malware_family,
+                    "ioc_hashes": payload.ioc_hashes,
                 },
                 "blockchain_tx": tx_hash_str
             }))

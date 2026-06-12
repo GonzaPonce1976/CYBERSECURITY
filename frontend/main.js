@@ -731,6 +731,239 @@ $('btn-refresh')?.addEventListener('click', async () => {
   toast('Datos actualizados', 'info', 2000);
 });
 
+// ── IoC Intelligence — MalwareBazaar ─────────────────────────────
+
+/** Carga correlaciones y actualiza tanto el Dashboard como la pestaña IoC */
+async function loadIocCorrelations() {
+  try {
+    const res = await api.getIocCorrelate();
+    renderIocCorrelations(res);
+    renderMbDashboardCard(res);
+  } catch (e) {
+    console.warn('IoC correlate error:', e);
+  }
+}
+
+/** Renderiza el panel de correlaciones en la vista IoC */
+function renderIocCorrelations(res) {
+  const body = $('ioc-correlations-body');
+  const badge = $('ioc-correlations-count');
+  if (!body) return;
+
+  const items = res?.data || [];
+  if (badge) badge.textContent = items.length;
+
+  if (!items.length) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">🛡️</div>
+      <p>${res?.message || 'Sin correlaciones detectadas en las alertas actuales'}</p></div>`;
+    return;
+  }
+
+  body.innerHTML = items.map(c => {
+    const conf = c.confidence || 0;
+    const confClass = conf >= 90 ? 'critical' : conf >= 80 ? 'high' : conf >= 70 ? 'medium' : 'low';
+    const samples = (c.mb_samples || []).slice(0, 2);
+    return `
+      <div class="ioc-correlation-item">
+        <div class="ioc-corr-header">
+          <span class="ioc-family-badge ioc-threat-${confClass}">${c.malware_family}</span>
+          <div class="ioc-conf-bar-wrap">
+            <div class="ioc-conf-bar" style="width:${conf}%" data-class="${confClass}"></div>
+            <span class="ioc-conf-label">${conf}%</span>
+          </div>
+        </div>
+        <div class="ioc-corr-meta">
+          <span>📨 ${c.alerts_matched} alerta${c.alerts_matched !== 1 ? 's' : ''} coincidentes</span>
+          <span>🦠 ${c.mb_samples_found} muestra${c.mb_samples_found !== 1 ? 's' : ''} en MB</span>
+        </div>
+        ${samples.map(s => `
+          <div class="ioc-sample-row">
+            <code class="ioc-hash">${s.sha256 || ''}…</code>
+            <span class="ioc-fname">${s.file_name || '?'}</span>
+            <span class="ioc-country">${s.origin_country || '?'}</span>
+            <a href="${s.reference}" target="_blank" class="ioc-ref-link">MB↗</a>
+          </div>`).join('')}
+        <a href="${c.mb_reference}" target="_blank" class="ioc-mb-tag-link">Ver tag en MalwareBazaar ↗</a>
+      </div>`;
+  }).join('');
+}
+
+/** Actualiza la tarjeta MalwareBazaar del Dashboard principal */
+function renderMbDashboardCard(res) {
+  const tbody = $('mb-correlations-tbody');
+  const badge = $('mb-correlations-badge');
+  if (!tbody) return;
+
+  const items = res?.data || [];
+  if (badge) badge.textContent = items.length;
+
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-icon">🛡️</div><p>Sin correlaciones</p></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(c => {
+    const conf = c.confidence || 0;
+    const confClass = conf >= 90 ? 'critical' : conf >= 80 ? 'high' : conf >= 70 ? 'medium' : 'low';
+    return `<tr>
+      <td><span class="badge badge-${confClass.toUpperCase()}">${c.malware_family}</span></td>
+      <td><span class="ioc-conf-inline">${conf}%</span></td>
+      <td>${c.alerts_matched}</td>
+      <td>${c.mb_samples_found}</td>
+      <td><a href="${c.mb_reference}" target="_blank" class="ioc-ref-link">↗ MB</a></td>
+    </tr>`;
+  }).join('');
+}
+
+/** Carga el feed reciente de MalwareBazaar */
+async function loadIocFeed() {
+  const body = $('ioc-feed-body');
+  if (!body) return;
+  try {
+    const res = await api.getIocFeed();
+    const items = res?.data || [];
+    if (!items.length) {
+      body.innerHTML = `<div class="empty-state"><div class="empty-icon">📡</div><p>Sin muestras recientes</p></div>`;
+      return;
+    }
+    body.innerHTML = items.map(s => `
+      <div class="ioc-feed-item">
+        <div class="ioc-feed-header">
+          <span class="ioc-signature">${s.signature || s.tags?.[0] || 'Desconocido'}</span>
+          <span class="ioc-ftype badge-INFO">${s.file_type || '?'}</span>
+        </div>
+        <div class="ioc-feed-meta">
+          <code class="ioc-hash-sm">${(s.sha256_hash || '').slice(0,20)}…</code>
+          <span>${s.file_name || 'sin nombre'}</span>
+          <span class="ioc-country">📍${s.origin_country || '??'}</span>
+          <a href="${s.reference}" target="_blank" class="ioc-ref-link">↗</a>
+        </div>
+        <div class="ioc-tags">
+          ${(s.tags || []).slice(0, 4).map(t => `<span class="ioc-tag">${t}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+/** Busca un hash específico en MalwareBazaar */
+async function loadUrlhausFeed() {
+  const body = $('ioc-urlhaus-body');
+  if (!body) return;
+  try {
+    const res = await api.getUrlhausFeed();
+    const items = res?.data || [];
+    if (!items.length) {
+      body.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div><p>Sin URLs recientes</p></div>`;
+      return;
+    }
+    body.innerHTML = items.map(s => `
+      <div class="ioc-feed-item">
+        <div class="ioc-feed-header">
+          <span class="ioc-signature">${s.threat || 'Malware Download'}</span>
+          <span class="ioc-ftype badge-CRITICAL">${s.url_status || 'online'}</span>
+        </div>
+        <div class="ioc-feed-meta">
+          <code class="ioc-hash-sm" style="color:var(--red)">${(s.url || '').slice(0,40)}…</code>
+          <span>IP: ${s.host || '??'}</span>
+          <a href="${s.urlhaus_reference}" target="_blank" class="ioc-ref-link">↗</a>
+        </div>
+        <div class="ioc-tags">
+          ${(s.tags || []).slice(0, 4).map(t => `<span class="ioc-tag">${t}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+async function loadThreatFoxFeed() {
+  const body = $('ioc-threatfox-body');
+  if (!body) return;
+  try {
+    const res = await api.getThreatFoxFeed();
+    const items = res?.data || [];
+    if (!items.length) {
+      body.innerHTML = `<div class="empty-state"><div class="empty-icon">🦊</div><p>Sin IoCs recientes</p></div>`;
+      return;
+    }
+    body.innerHTML = items.map(s => {
+      const isHighConf = (s.confidence_level || 0) >= 75;
+      const badgeCls = isHighConf ? 'badge-CRITICAL' : 'badge-HIGH';
+      return `
+      <div class="ioc-feed-item">
+        <div class="ioc-feed-header">
+          <span class="ioc-signature">${s.malware_printable || s.malware || 'Unknown'}</span>
+          <span class="ioc-ftype ${badgeCls}">${s.threat_type || '?'}</span>
+        </div>
+        <div class="ioc-feed-meta">
+          <code class="ioc-hash-sm">${s.ioc || ''}</code>
+          <span>Conf: ${s.confidence_level}%</span>
+        </div>
+        <div class="ioc-tags">
+          ${(s.tags || []).slice(0, 4).map(t => `<span class="ioc-tag">${t}</span>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+/** Busca un hash específico en MalwareBazaar */
+async function searchIocHash() {
+  const input = $('ioc-hash-input');
+  const panel = $('ioc-hash-result');
+  if (!input || !panel) return;
+  const hash = input.value.trim();
+  if (!hash) return;
+
+  panel.style.display = 'block';
+  panel.innerHTML = `<div class="ioc-result-loading"><div class="spin">⏳</div> Consultando MalwareBazaar...</div>`;
+
+  try {
+    const res = await api.queryHash(hash);
+    if (!res.found || !res.data) {
+      panel.innerHTML = `<div class="ioc-result-empty">✅ Hash <code>${hash.slice(0,16)}…</code> no encontrado en MalwareBazaar — no está catalogado como malware conocido.</div>`;
+      return;
+    }
+    const d = res.data;
+    const tags = (d.tags || []).map(t => `<span class="ioc-tag">${t}</span>`).join('');
+    const clamav = (d.clamav || []).join(', ') || '—';
+    panel.innerHTML = `
+      <div class="ioc-result-card ioc-result-found">
+        <div class="ioc-result-title">
+          <span class="ioc-family-badge ioc-threat-critical">🦠 ${d.signature || 'Malware Detectado'}</span>
+          <a href="https://bazaar.abuse.ch/sample/${hash}/" target="_blank" class="ioc-ref-link">Ver en MalwareBazaar ↗</a>
+        </div>
+        <div class="ioc-result-grid">
+          <div><label>Archivo</label><span>${d.file_name || '—'}</span></div>
+          <div><label>Tipo</label><span>${d.file_type || '—'} · ${d.file_size_bytes ? (d.file_size_bytes/1024).toFixed(1)+' KB' : '?'}</span></div>
+          <div><label>SHA256</label><code class="ioc-hash">${(d.sha256_hash || hash).slice(0,32)}…</code></div>
+          <div><label>MD5</label><code class="ioc-hash-sm">${d.md5_hash || '—'}</code></div>
+          <div><label>Primera vez</label><span>${d.first_seen || '—'}</span></div>
+          <div><label>Última vez</label><span>${d.last_seen || '—'}</span></div>
+          <div><label>Origen</label><span>${d.origin_country || '—'}</span></div>
+          <div><label>Entrega</label><span>${d.delivery_method || '—'}</span></div>
+          <div><label>ClamAV</label><span>${clamav}</span></div>
+          <div><label>Reporter</label><span>${d.reporter || '—'}</span></div>
+        </div>
+        <div class="ioc-tags">${tags}</div>
+      </div>`;
+  } catch (e) {
+    panel.innerHTML = `<div class="ioc-result-empty">❌ Error: ${e.message}</div>`;
+  }
+}
+
+/** Inicializa todos los eventos de la vista IoC */
+function initIocView() {
+  $('btn-ioc-search')?.addEventListener('click', searchIocHash);
+  $('ioc-hash-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') searchIocHash(); });
+  $('btn-ioc-refresh')?.addEventListener('click', () => { loadIocCorrelations(); loadIocFeed(); loadUrlhausFeed(); loadThreatFoxFeed(); });
+  $('nav-ioc')?.addEventListener('click', () => { loadIocCorrelations(); loadIocFeed(); loadUrlhausFeed(); loadThreatFoxFeed(); });
+}
+
 // ── Bootstrap ────────────────────────────────────────────────
 async function init() {
   initRouter();
@@ -740,6 +973,7 @@ async function init() {
   initCveView();
   initAlertsFilters();
   initServicesView();
+  initIocView();
 
   // Wallet
   initWalletButton();
@@ -749,12 +983,14 @@ async function init() {
   await checkGatewayHealth();
   await loadAlerts();
   await loadPerimetralExposures().catch(() => {});
+  await loadIocCorrelations().catch(() => {});
 
   // Auto-refresh cada 30s
   state.refreshInterval = setInterval(async () => {
     await checkGatewayHealth();
     await loadAlerts();
     await loadPerimetralExposures().catch(() => {});
+    await loadIocCorrelations().catch(() => {});
   }, 30000);
 
   // WebSocket

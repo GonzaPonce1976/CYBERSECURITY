@@ -538,4 +538,259 @@ tr:last-child td { border-bottom: none; }
   text-shadow: 0 0 8px var(--cyan);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   IoC Intelligence — MalwareBazaar (abuse.ch)
+   ══════════════════════════════════════════════════════════════ */
 
+/* ── Barra de búsqueda de hash ─────────────────────────────── */
+.ioc-search-bar {
+  margin-bottom: 1.5rem;
+}
+.ioc-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  transition: var(--transition);
+}
+.ioc-search-wrap:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px var(--cyan-dim);
+}
+.ioc-search-icon { font-size: 1.1rem; flex-shrink: 0; }
+.ioc-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.ioc-search-input::placeholder { color: var(--text-muted); }
+.ioc-search-btn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.ioc-search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+}
+
+/* ── Resultado de búsqueda ─────────────────────────────────── */
+.ioc-result-panel { margin-bottom: 1.5rem; }
+.ioc-result-loading {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 1.2rem 1.5rem;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.ioc-result-empty {
+  padding: 1.2rem 1.5rem;
+  background: rgba(0,255,157,0.05);
+  border: 1px solid rgba(0,255,157,0.2);
+  border-radius: var(--radius);
+  color: var(--green);
+  font-size: 0.9rem;
+}
+.ioc-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: fadeIn 0.3s ease;
+}
+.ioc-result-found { border-color: rgba(255,58,92,0.4); box-shadow: 0 0 20px rgba(255,58,92,0.1); }
+.ioc-result-title {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
+}
+.ioc-result-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem 1.5rem; margin-bottom: 1rem;
+}
+.ioc-result-grid > div {
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.ioc-result-grid label {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.ioc-result-grid span, .ioc-result-grid code {
+  font-size: 0.82rem; color: var(--text-primary);
+}
+
+/* ── Grid principal IoC ────────────────────────────────────── */
+.ioc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 900px) { .ioc-grid { grid-template-columns: 1fr; } }
+
+.ioc-card { display: flex; flex-direction: column; }
+.ioc-scroll {
+  flex: 1; overflow-y: auto; max-height: 480px;
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+.ioc-scroll::-webkit-scrollbar { width: 4px; }
+.ioc-scroll::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+
+/* ── Badges de fuente y live ───────────────────────────────── */
+.ioc-source-badge {
+  background: linear-gradient(135deg, #ff3a5c22, #ff3a5c44);
+  border: 1px solid rgba(255,58,92,0.4);
+  color: #ff3a5c;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.ioc-live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red);
+  animation: pulse-dot 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Familia de malware badges ─────────────────────────────── */
+.ioc-family-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.8rem; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em;
+}
+.ioc-threat-critical {
+  background: rgba(255,58,92,0.15);
+  border: 1px solid rgba(255,58,92,0.4);
+  color: #ff3a5c;
+}
+.ioc-threat-high {
+  background: rgba(255,123,0,0.15);
+  border: 1px solid rgba(255,123,0,0.4);
+  color: var(--orange);
+}
+.ioc-threat-medium {
+  background: rgba(255,215,0,0.12);
+  border: 1px solid rgba(255,215,0,0.3);
+  color: var(--yellow);
+}
+.ioc-threat-low {
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.25);
+  color: var(--cyan);
+}
+
+/* ── Correlaciones ─────────────────────────────────────────── */
+.ioc-correlation-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
+  transition: var(--transition);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.ioc-correlation-item:hover {
+  border-color: var(--border-glow);
+  transform: translateX(2px);
+}
+.ioc-corr-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+}
+.ioc-conf-bar-wrap {
+  display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 120px;
+}
+.ioc-conf-bar {
+  height: 6px; border-radius: 3px; transition: width 0.6s ease;
+  background: linear-gradient(90deg, #ff3a5c, #ff7b00);
+  max-width: 100%;
+}
+.ioc-conf-bar[data-class="high"] { background: linear-gradient(90deg, #ff7b00, #ffd700); }
+.ioc-conf-bar[data-class="medium"] { background: linear-gradient(90deg, #ffd700, #00d4ff); }
+.ioc-conf-bar[data-class="low"] { background: var(--cyan); }
+.ioc-conf-label { font-size: 0.72rem; color: var(--text-secondary); white-space: nowrap; }
+.ioc-conf-inline {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--orange); font-family: var(--mono);
+}
+.ioc-corr-meta {
+  display: flex; gap: 1rem; font-size: 0.75rem; color: var(--text-secondary);
+}
+.ioc-sample-row {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  background: rgba(0,0,0,0.2); border-radius: 6px;
+  padding: 0.35rem 0.6rem; font-size: 0.75rem;
+}
+.ioc-mb-tag-link {
+  font-size: 0.75rem; color: var(--purple); text-decoration: none;
+  transition: var(--transition); align-self: flex-end;
+}
+.ioc-mb-tag-link:hover { color: #a855f7; text-decoration: underline; }
+
+/* ── Feed reciente ─────────────────────────────────────────── */
+.ioc-feed-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+  transition: var(--transition);
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.ioc-feed-item:hover { border-color: rgba(255,58,92,0.35); }
+.ioc-feed-header { display: flex; align-items: center; justify-content: space-between; }
+.ioc-signature { font-size: 0.82rem; font-weight: 700; color: #ff3a5c; }
+.ioc-ftype {
+  font-size: 0.65rem; padding: 0.15rem 0.5rem;
+  border-radius: 4px; background: rgba(0,212,255,0.1);
+  color: var(--cyan); border: 1px solid rgba(0,212,255,0.2);
+}
+.ioc-feed-meta {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.75rem; color: var(--text-secondary); flex-wrap: wrap;
+}
+.ioc-country { color: var(--text-muted); font-size: 0.72rem; }
+
+/* ── Tags ──────────────────────────────────────────────────── */
+.ioc-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; }
+.ioc-tag {
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #a78bfa; font-size: 0.68rem; padding: 0.15rem 0.5rem;
+  border-radius: 4px; font-family: var(--mono);
+}
+
+/* ── Hashes ────────────────────────────────────────────────── */
+.ioc-hash {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--cyan); background: rgba(0,212,255,0.06);
+  padding: 0.1rem 0.4rem; border-radius: 4px;
+}
+.ioc-hash-sm { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); }
+.ioc-fname { font-size: 0.75rem; color: var(--text-secondary); }
+
+/* ── Links de referencia ────────────────────────────────────── */
+.ioc-ref-link {
+  font-size: 0.72rem; color: var(--purple);
+  text-decoration: none; transition: var(--transition);
+}
+.ioc-ref-link:hover { color: #a855f7; text-decoration: underline; }
+
+/* ── Animación spin para loading ───────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}

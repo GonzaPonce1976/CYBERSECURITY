@@ -19,6 +19,8 @@ contract SecurityAudit {
         string eventType;      // "INTRUSION", "MALWARE", "ANOMALY", "COMPLIANCE"
         string description;
         bytes32 dataHash;      // SHA256 del payload completo en Rust
+        string malwareFamily;  // Familia de malware (Ej. "Emotet")
+        string[] iocHashes;    // Hashes detectados (Ej. SHA256 de las muestras)
         address reporter;      // Dirección del Rust gateway
         string agentName;      // Nombre del agente Wazuh (opcional)
         string srcIp;          // IP de origen (opcional)
@@ -79,6 +81,8 @@ contract SecurityAudit {
      * @param eventType Tipo de evento ("INTRUSION", "MALWARE", etc.)
      * @param description Descripción legible del evento
      * @param dataHash Hash SHA256 del payload completo del evento
+     * @param malwareFamily Nombre de la familia de malware identificada
+     * @param iocHashes Lista de hashes (SHA256) de indicadores de compromiso
      * @param agentName Nombre del agente que detectó el evento
      * @param srcIp IP de origen del ataque (vacío si no aplica)
      * @return id El ID del evento registrado
@@ -88,6 +92,8 @@ contract SecurityAudit {
         string calldata eventType,
         string calldata description,
         bytes32 dataHash,
+        string calldata malwareFamily,
+        string[] calldata iocHashes,
         string calldata agentName,
         string calldata srcIp
     ) external onlyGateway returns (uint256 id) {
@@ -105,6 +111,8 @@ contract SecurityAudit {
             eventType: eventType,
             description: description,
             dataHash: dataHash,
+            malwareFamily: malwareFamily,
+            iocHashes: iocHashes,
             reporter: msg.sender,
             agentName: agentName,
             srcIp: srcIp,

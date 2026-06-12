@@ -27,6 +27,7 @@
           <button class="nav-btn" data-view="ip" id="nav-ip">Reputación IP</button>
           <button class="nav-btn" data-view="cve" id="nav-cve">CVE Lookup</button>
           <button class="nav-btn" data-view="audit" id="nav-audit">Audit Trail</button>
+          <button class="nav-btn" data-view="ioc" id="nav-ioc">🦠 IoC Intel</button>
           <button class="nav-btn" data-view="servicios" id="nav-servicios">⚙ Servicios</button>
         </nav>
         <div class="navbar-actions">
@@ -155,6 +156,35 @@
                   <div class="empty-icon">🛡️</div>
                   <p>Conectando con el Gateway...</p>
                 </div>
+              </div>
+            </div>
+
+            <!-- MalwareBazaar Correlations Card -->
+            <div class="card table-card" id="malware-correlations-card">
+              <div class="card-header">
+                <h2 class="card-title">🦠 Correlaciones MalwareBazaar (abuse.ch)</h2>
+                <span class="badge-count" id="mb-correlations-badge">0</span>
+              </div>
+              <div class="table-container" style="max-height: 210px; overflow-y: auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Familia</th>
+                      <th>Confianza</th>
+                      <th>Alertas</th>
+                      <th>Muestras MB</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mb-correlations-tbody">
+                    <tr>
+                      <td colspan="5" class="empty-state">
+                        <div class="empty-icon">🦠</div>
+                        <p>Cargando correlaciones...</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -427,6 +457,96 @@
 
         </div>
         <!-- /view-servicios -->
+
+        <!-- ── IOC INTELLIGENCE VIEW ────────────────────────────── -->
+        <div class="view" id="view-ioc">
+          <div class="view-header">
+            <h1 class="view-title">🦠 IoC Intelligence — Abuse.ch</h1>
+            <div class="view-meta">
+              <span class="ioc-source-badge">MalwareBazaar + ThreatFox + URLhaus</span>
+              <button class="btn-refresh" id="btn-ioc-refresh" title="Refrescar">↻</button>
+            </div>
+          </div>
+
+          <!-- Búsqueda manual de hash -->
+          <div class="ioc-search-bar">
+            <div class="ioc-search-wrap">
+              <span class="ioc-search-icon">🔍</span>
+              <input
+                id="ioc-hash-input"
+                type="text"
+                class="ioc-search-input"
+                placeholder="SHA256 / MD5 / SHA1 — ej: 094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d"
+                spellcheck="false"
+              />
+              <button class="ioc-search-btn" id="btn-ioc-search">Analizar</button>
+            </div>
+          </div>
+
+          <!-- Resultado de búsqueda de hash -->
+          <div id="ioc-hash-result" style="display:none;" class="ioc-result-panel"></div>
+
+          <!-- Grid de 2 columnas: Correlaciones + Feed reciente -->
+          <div class="ioc-grid">
+
+            <!-- Panel Correlaciones automáticas -->
+            <div class="card ioc-card">
+              <div class="card-header">
+                <h2 class="card-title">🔗 Correlaciones con Alertas Wazuh</h2>
+                <span class="badge-count" id="ioc-correlations-count">0</span>
+              </div>
+              <div id="ioc-correlations-body" class="ioc-scroll">
+                <div class="empty-state">
+                  <div class="empty-icon">⏳</div>
+                  <p>Analizando alertas...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel Feed reciente MalwareBazaar -->
+            <div class="card ioc-card">
+              <div class="card-header">
+                <h2 class="card-title">📡 Feed Reciente MalwareBazaar</h2>
+                <span class="ioc-live-dot"></span>
+              </div>
+              <div id="ioc-feed-body" class="ioc-scroll">
+                <div class="empty-state">
+                  <div class="empty-icon">📡</div>
+                  <p>Cargando feed...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel Feed reciente ThreatFox -->
+            <div class="card ioc-card">
+              <div class="card-header">
+                <h2 class="card-title">🦊 Feed Reciente ThreatFox</h2>
+                <span class="ioc-live-dot"></span>
+              </div>
+              <div id="ioc-threatfox-body" class="ioc-scroll">
+                <div class="empty-state">
+                  <div class="empty-icon">🦊</div>
+                  <p>Cargando IoCs...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel Feed reciente URLhaus -->
+            <div class="card ioc-card">
+              <div class="card-header">
+                <h2 class="card-title">🔗 Feed Reciente URLhaus</h2>
+                <span class="ioc-live-dot"></span>
+              </div>
+              <div id="ioc-urlhaus-body" class="ioc-scroll">
+                <div class="empty-state">
+                  <div class="empty-icon">🔗</div>
+                  <p>Cargando URLs...</p>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /ioc-grid -->
+        </div><!-- /view-ioc -->
 
       </main>
 
