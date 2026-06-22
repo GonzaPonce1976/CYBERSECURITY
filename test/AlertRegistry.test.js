@@ -1,5 +1,16 @@
 import { expect } from "chai";
 import hre from "hardhat";
+import { getContract } from "viem";
+
+async function getContractInstance(name, address, wallet) {
+  const pc = await hre.viem.getPublicClient();
+  const artifact = await hre.artifacts.readArtifact(name);
+  return getContract({
+    address,
+    abi: artifact.abi,
+    client: { wallet, public: pc },
+  });
+}
 
 /**
  * Tests del contrato AlertRegistry
@@ -10,23 +21,13 @@ describe("AlertRegistry", function () {
     const [owner, gateway, analyst, attacker] = await hre.viem.getWalletClients();
     const publicClient = await hre.viem.getPublicClient();
 
-    const contract = await hre.viem.deployContract("AlertRegistry", [
+    const deployed = await hre.viem.deployContract("AlertRegistry", [
       gateway.account.address,
     ]);
 
-    // Helper: contrato conectado como gateway
-    const asGateway = await hre.viem.getContractAt(
-      "AlertRegistry",
-      contract.address,
-      { client: { wallet: gateway } }
-    );
-
-    // Helper: contrato conectado como owner
-    const asOwner = await hre.viem.getContractAt(
-      "AlertRegistry",
-      contract.address,
-      { client: { wallet: owner } }
-    );
+    const contract = await getContractInstance("AlertRegistry", deployed.address, owner);
+    const asGateway = await getContractInstance("AlertRegistry", deployed.address, gateway);
+    const asOwner = await getContractInstance("AlertRegistry", deployed.address, owner);
 
     return { contract, owner, gateway, analyst, attacker, asGateway, asOwner, publicClient };
   }
@@ -128,10 +129,10 @@ describe("AlertRegistry", function () {
     it("rechaza createAlert desde cuenta no autorizada", async function () {
       const { contract, attacker } = await deployFixture();
 
-      const asAttacker = await hre.viem.getContractAt(
+      const asAttacker = await getContractInstance(
         "AlertRegistry",
         contract.address,
-        { client: { wallet: attacker } }
+        attacker
       );
 
       await expect(
@@ -200,10 +201,10 @@ describe("AlertRegistry", function () {
         "Impact",
       ]);
 
-      const asAttacker = await hre.viem.getContractAt(
+      const asAttacker = await getContractInstance(
         "AlertRegistry",
         contract.address,
-        { client: { wallet: attacker } }
+        attacker
       );
 
       await expect(

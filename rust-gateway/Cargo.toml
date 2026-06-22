@@ -68,6 +68,8 @@ alloy = { version = "2.0.4", features = [
   "reqwest",
   "network",
 ] }
+url = "2.5"
+
 
 [dev-dependencies]
 tokio-test = "0.4"

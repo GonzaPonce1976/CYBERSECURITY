@@ -1,56 +1,63 @@
 # sync_contracts.ps1
-# Lee deployments/localhost.json y sincroniza las addresses en ambos .env
+# Lee deployments/localhost.json y deployments/localhost_arcat.json
+# Sincroniza las addresses en ambos .env (raiz y rust-gateway)
 # Uso: powershell -ExecutionPolicy Bypass -File sync_contracts.ps1
 
 param(
     [string]$ProjectDir = (Split-Path -Parent $MyInvocation.MyCommand.Path)
 )
 
-$deployJson    = Join-Path $ProjectDir "deployments\localhost.json"
-$rootEnv       = Join-Path $ProjectDir ".env"
-$gatewayEnv    = Join-Path $ProjectDir "rust-gateway\.env"
+$deployJson      = Join-Path $ProjectDir "deployments\localhost.json"
+$deployArcatJson = Join-Path $ProjectDir "deployments\localhost_arcat.json"
+$rootEnv         = Join-Path $ProjectDir ".env"
+$gatewayEnv      = Join-Path $ProjectDir "rust-gateway\.env"
 
-# ── Leer deploy manifest ──────────────────────────────────────────
-if (-not (Test-Path $deployJson)) {
-    Write-Host "[ERROR] No se encontro deployments\localhost.json" -ForegroundColor Red
-    exit 1
+$vars = @{}
+
+# ── Leer deploy manifest base ──────────────────────────────────────
+if (Test-Path $deployJson) {
+    $deploy = Get-Content $deployJson | ConvertFrom-Json
+    $vars["CONTRACT_SECURITY_AUDIT"]      = $deploy.contracts.SecurityAudit
+    $vars["CONTRACT_ALERT_REGISTRY"]      = $deploy.contracts.AlertRegistry
+    $vars["VITE_CONTRACT_SECURITY_AUDIT"] = $deploy.contracts.SecurityAudit
+    $vars["VITE_CONTRACT_ALERT_REGISTRY"] = $deploy.contracts.AlertRegistry
+} else {
+    Write-Host "[AVISO] No se encontro deployments\localhost.json" -ForegroundColor Yellow
 }
 
-$deploy = Get-Content $deployJson | ConvertFrom-Json
-$secAudit  = $deploy.contracts.SecurityAudit
-$alertReg  = $deploy.contracts.AlertRegistry
+# ── Leer deploy manifest ARCAT ─────────────────────────────────────
+if (Test-Path $deployArcatJson) {
+    $deployArcat = Get-Content $deployArcatJson | ConvertFrom-Json
+    
+    $vars["CONTRACT_ARCAT_ROOT"]     = $deployArcat.contracts.ArcatRoot
+    $vars["CONTRACT_ARCAT_REGISTRY"] = $deployArcat.contracts.ArcatRegistry
+    $vars["VITE_ARCAT_ROOT"]         = $deployArcat.contracts.ArcatRoot
+    $vars["VITE_ARCAT_REGISTRY"]     = $deployArcat.contracts.ArcatRegistry
 
-if (-not $secAudit -or -not $alertReg) {
-    Write-Host "[ERROR] El JSON de deploy no contiene las addresses esperadas." -ForegroundColor Red
-    exit 1
+    # Direcciones Generales
+    foreach ($dgCode in $deployArcat.contracts.DireccionesGenerales.psobject.properties.name) {
+        $dgAddr = $deployArcat.contracts.DireccionesGenerales.$dgCode.address
+        $key = "CONTRACT_DG_" + $dgCode.Replace("-", "_")
+        $vars[$key] = $dgAddr
+        $vars["VITE_" + $key] = $dgAddr
+    }
+
+    # Unidades Operativas
+    foreach ($dgCode in $deployArcat.contracts.UnidadesOperativas.psobject.properties.name) {
+        $uos = $deployArcat.contracts.UnidadesOperativas.$dgCode
+        foreach ($uoCode in $uos.psobject.properties.name) {
+            $uoAddr = $uos.$uoCode.address
+            $key = "CONTRACT_" + $uoCode.Replace("-", "_")
+            $vars[$key] = $uoAddr
+            $vars["VITE_" + $key] = $uoAddr
+        }
+    }
+} else {
+    Write-Host "[AVISO] No se encontro deployments\localhost_arcat.json" -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "  Addresses extraidas del deploy:" -ForegroundColor Cyan
-Write-Host "    SecurityAudit  = $secAudit" -ForegroundColor Green
-Write-Host "    AlertRegistry  = $alertReg" -ForegroundColor Green
-Write-Host ""
-
-# ── Funcion de actualizacion de .env ─────────────────────────────
-function Update-EnvFile {
-    param([string]$Path, [string]$SA, [string]$AR)
-
-    if (-not (Test-Path $Path)) {
-        Write-Host "  [AVISO] No se encontro: $Path" -ForegroundColor Yellow
-        return
-    }
-
-    $content = Get-Content $Path -Raw
-
-    # Reemplazar o agregar cada variable
-    $vars = @{
-        "CONTRACT_SECURITY_AUDIT"      = $SA
-        "CONTRACT_ALERT_REGISTRY"      = $AR
-        "VITE_CONTRACT_SECURITY_AUDIT" = $SA
-        "VITE_CONTRACT_ALERT_REGISTRY" = $AR
-    }
-
-    # Sincronizar tambien ABUSECH_AUTH_KEY si esta definida en root .env
+# ── Sincronizar ABUSECH_AUTH_KEY si esta en root .env ──────────────
+if (Test-Path $rootEnv) {
     $rootContent = Get-Content $rootEnv -Raw -ErrorAction SilentlyContinue
     if ($rootContent -match "(?m)^ABUSECH_AUTH_KEY=(.+)") {
         $abusechKey = $Matches[1].Trim()
@@ -58,9 +65,24 @@ function Update-EnvFile {
             $vars["ABUSECH_AUTH_KEY"] = $abusechKey
         }
     }
+}
 
-    foreach ($key in $vars.Keys) {
-        $val = $vars[$key]
+# ── Funcion de actualizacion de .env ─────────────────────────────
+function Update-EnvFile {
+    param(
+        [string]$Path,
+        [hashtable]$Variables
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "  [AVISO] No se encontro: $Path. Creando archivo vacio." -ForegroundColor Yellow
+        New-Item -ItemType File -Path $Path -Force | Out-Null
+    }
+
+    $content = Get-Content $Path -Raw
+
+    foreach ($key in $Variables.Keys) {
+        $val = $Variables[$key]
         if ($content -match "(?m)^$key=") {
             $content = $content -replace "(?m)^$key=.*", "$key=$val"
         } else {
@@ -68,26 +90,19 @@ function Update-EnvFile {
         }
     }
 
-    # Escribir sin BOM para compatibilidad con Rust/dotenvy
+    # Escribir sin BOM
     [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
     Write-Host "  [OK] Actualizado: $Path" -ForegroundColor Green
 }
 
-# ── Actualizar root .env ──────────────────────────────────────────
-Write-Host "  Sincronizando root .env ..."
-Update-EnvFile -Path $rootEnv -SA $secAudit -AR $alertReg
+Write-Host ""
+Write-Host "  Sincronizando root .env ..." -ForegroundColor Cyan
+Update-EnvFile -Path $rootEnv -Variables $vars
 
-# ── Actualizar gateway .env ───────────────────────────────────────
-Write-Host "  Sincronizando rust-gateway .env ..."
-Update-EnvFile -Path $gatewayEnv -SA $secAudit -AR $alertReg
+Write-Host "  Sincronizando rust-gateway .env ..." -ForegroundColor Cyan
+Update-EnvFile -Path $gatewayEnv -Variables $vars
 
 Write-Host ""
-Write-Host "  [OK] Sincronizacion completa. Ambos .env contienen:" -ForegroundColor Green
-Write-Host "    CONTRACT_SECURITY_AUDIT = $secAudit"
-Write-Host "    CONTRACT_ALERT_REGISTRY = $alertReg"
+Write-Host "  [OK] Sincronizacion completa." -ForegroundColor Green
 Write-Host ""
-
-# ── Devolver las addresses como variables de entorno ──────────────
-# (para que el bat pueda leerlas via %ERRORLEVEL% no aplica,
-#  pero el bat ya las tiene via el JSON — este script solo sincroniza)
 exit 0

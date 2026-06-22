@@ -144,7 +144,14 @@ echo  Desplegando SecurityAudit + AlertRegistry...
 
 call npm run deploy:local
 if %errorlevel% neq 0 (
-    echo  [ERROR] Fallo el deploy. Verifica que Hardhat este en :8545.
+    echo  [ERROR] Fallo el deploy de SecurityAudit. Verifica que Hardhat este en :8545.
+    pause & exit /b 1
+)
+
+echo  Desplegando ARCAT Multicontratos SBT...
+call npm run deploy:arcat:local
+if %errorlevel% neq 0 (
+    echo  [ERROR] Fallo el deploy de ARCAT. Verifica que Hardhat este en :8545.
     pause & exit /b 1
 )
 
@@ -153,7 +160,7 @@ if not exist "%DEPLOY_JSON%" (
     pause & exit /b 1
 )
 echo.
-echo  [OK] Smart Contracts desplegados exitosamente.
+echo  [OK] Todos los Smart Contracts desplegados exitosamente.
 
 echo.
 echo  ┌─────────────────────────────────────────────────────────────┐
@@ -170,15 +177,21 @@ if %errorlevel% neq 0 (
 REM Leer las addresses sincronizadas directamente del archivo .env
 set "ADDR_SECURITY="
 set "ADDR_REGISTRY="
+set "ADDR_ARCAT_ROOT="
+set "ADDR_ARCAT_REGISTRY="
 for /f "usebackq tokens=1,2 delims==" %%i in ("%PROJECT_DIR%\.env") do (
     if "%%i"=="CONTRACT_SECURITY_AUDIT" set "ADDR_SECURITY=%%j"
     if "%%i"=="CONTRACT_ALERT_REGISTRY" set "ADDR_REGISTRY=%%j"
+    if "%%i"=="CONTRACT_ARCAT_ROOT" set "ADDR_ARCAT_ROOT=%%j"
+    if "%%i"=="CONTRACT_ARCAT_REGISTRY" set "ADDR_ARCAT_REGISTRY=%%j"
 )
 
 echo.
 echo  [OK] Direcciones sincronizadas:
 echo       SecurityAudit: !ADDR_SECURITY!
 echo       AlertRegistry: !ADDR_REGISTRY!
+echo       ArcatRoot:     !ADDR_ARCAT_ROOT!
+echo       ArcatRegistry: !ADDR_ARCAT_REGISTRY!
 
 echo.
 echo  ┌─────────────────────────────────────────────────────────────┐
@@ -293,6 +306,8 @@ echo    BLOCKCHAIN
 if defined ADDR_SECURITY (
     echo      SecurityAudit  : !ADDR_SECURITY!
     echo      AlertRegistry  : !ADDR_REGISTRY!
+    echo      ArcatRoot      : !ADDR_ARCAT_ROOT!
+    echo      ArcatRegistry  : !ADDR_ARCAT_REGISTRY!
 ) else (
     echo      Revisa deployments\localhost.json para las direcciones de contratos
 )

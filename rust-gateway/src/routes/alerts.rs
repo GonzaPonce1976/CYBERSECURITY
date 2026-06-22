@@ -179,6 +179,54 @@ async fn receive_webhook(
         }
     };
 
+    // ─── Enrutamiento ARCAT (Multicontratos SBT) ─────────────────────────────
+    let arcat_client = crate::clients::arcat::ArcatClient::new(
+        state.eth_rpc_url.clone(),
+        state.deployer_private_key.clone(),
+        state.contract_arcat_registry.clone(),
+        state.contract_arcat_root.clone(),
+    );
+
+    if arcat_client.is_configured() {
+        let client_arcat = Arc::new(arcat_client);
+        let hostname = alert.source_agent.clone().unwrap_or_else(|| "unknown".to_string());
+        let event_type = alert.event_type.clone();
+        let severity_str = format!("{:?}", alert.severity).to_uppercase();
+        let description = alert.description.clone();
+        let malware_family = payload.get("malware_family")
+            .or_else(|| payload.get("malware").and_then(|m| m.get("family")))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let ioc_hashes = payload.get("ioc_hashes")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+            .unwrap_or_else(Vec::new);
+        let src_ip = alert.src_ip.clone().unwrap_or_else(|| "0.0.0.0".to_string());
+        let alert_id_clone = alert_id.clone();
+
+        tokio::spawn(async move {
+            tracing::info!("📡 [ARCAT Webhook] Enrutando alerta '{}' para hostname '{}'...", alert_id_clone, hostname);
+            match client_arcat.route_wazuh_alert(
+                &hostname,
+                &event_type,
+                &severity_str,
+                &description,
+                &malware_family,
+                ioc_hashes,
+                &src_ip,
+                &alert_id_clone,
+            ).await {
+                Ok(res) => {
+                    tracing::info!("✅ [ARCAT Webhook] Resultado enrutamiento: {}", res);
+                }
+                Err(e) => {
+                    tracing::error!("❌ [ARCAT Webhook] Fallo enrutamiento: {}", e);
+                }
+            }
+        });
+    }
+
     // Insertar en caché local
     state.alerts_cache.insert(alert_id.clone(), alert);
 

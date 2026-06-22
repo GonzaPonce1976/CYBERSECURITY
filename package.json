@@ -17,6 +17,8 @@
     "clean": "hardhat clean --config hardhat.config.cjs",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost --config hardhat.config.cjs",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia --config hardhat.config.cjs",
+    "deploy:arcat:local": "hardhat run scripts/deploy_arcat.js --network localhost --config hardhat.config.cjs",
+    "deploy:arcat:sepolia": "hardhat run scripts/deploy_arcat.js --network sepolia --config hardhat.config.cjs",
     "verify:contracts": "hardhat run scripts/deploy.js --network sepolia --config hardhat.config.cjs",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml down",

@@ -75,6 +75,30 @@ pub struct AppState {
     pub contract_security_audit: String,
     pub contract_alert_registry: String,
 
+    /// Contratos ARCAT Multicontratos SBT
+    pub contract_arcat_root:     String,
+    pub contract_arcat_registry: String,
+    pub contract_dg_dgr:         String,
+    pub contract_dg_dgc:         String,
+    pub contract_dg_dgrpi:       String,
+    pub contract_dg_staff:       String,
+    // Unidades Operativas
+    pub contract_uo_rec:         String,
+    pub contract_uo_fis:         String,
+    pub contract_uo_san:         String,
+    pub contract_uo_car:         String,
+    pub contract_uo_reg:         String,
+    pub contract_uo_rin:         String,
+    pub contract_uo_pub:         String,
+    pub contract_uo_adm:         String,
+    pub contract_uo_rhh:         String,
+    pub contract_uo_tec:         String,
+    pub contract_uo_jur:         String,
+    pub contract_uo_gre:         String,
+    pub contract_uo_aud:         String,
+    pub contract_uo_sec:         String,
+
+
     /// URL del gateway central para forwarding (modo sensor/relay).
     /// Si está vacía, este gateway opera como servidor central (sin forwarding).
     pub central_gateway_url: Option<String>,
@@ -135,6 +159,36 @@ impl AppState {
         let contract_security_audit = std::env::var("CONTRACT_SECURITY_AUDIT").unwrap_or_default();
         let contract_alert_registry = std::env::var("CONTRACT_ALERT_REGISTRY").unwrap_or_default();
 
+        // Variables ARCAT Multicontratos SBT
+        let contract_arcat_root     = std::env::var("CONTRACT_ARCAT_ROOT").unwrap_or_default();
+        let contract_arcat_registry = std::env::var("CONTRACT_ARCAT_REGISTRY").unwrap_or_default();
+        let contract_dg_dgr         = std::env::var("CONTRACT_DG_DGR").unwrap_or_default();
+        let contract_dg_dgc         = std::env::var("CONTRACT_DG_DGC").unwrap_or_default();
+        let contract_dg_dgrpi       = std::env::var("CONTRACT_DG_DGRPI").unwrap_or_default();
+        let contract_dg_staff       = std::env::var("CONTRACT_DG_STAFF").unwrap_or_default();
+        let contract_uo_rec         = std::env::var("CONTRACT_UO_REC").unwrap_or_default();
+        let contract_uo_fis         = std::env::var("CONTRACT_UO_FIS").unwrap_or_default();
+        let contract_uo_san         = std::env::var("CONTRACT_UO_SAN").unwrap_or_default();
+        let contract_uo_car         = std::env::var("CONTRACT_UO_CAR").unwrap_or_default();
+        let contract_uo_reg         = std::env::var("CONTRACT_UO_REG").unwrap_or_default();
+        let contract_uo_rin         = std::env::var("CONTRACT_UO_RIN").unwrap_or_default();
+        let contract_uo_pub         = std::env::var("CONTRACT_UO_PUB").unwrap_or_default();
+        let contract_uo_adm         = std::env::var("CONTRACT_UO_ADM").unwrap_or_default();
+        let contract_uo_rhh         = std::env::var("CONTRACT_UO_RHH").unwrap_or_default();
+        let contract_uo_tec         = std::env::var("CONTRACT_UO_TEC").unwrap_or_default();
+        let contract_uo_jur         = std::env::var("CONTRACT_UO_JUR").unwrap_or_default();
+        let contract_uo_gre         = std::env::var("CONTRACT_UO_GRE").unwrap_or_default();
+        let contract_uo_aud         = std::env::var("CONTRACT_UO_AUD").unwrap_or_default();
+        let contract_uo_sec         = std::env::var("CONTRACT_UO_SEC").unwrap_or_default();
+
+        if !contract_arcat_root.is_empty() {
+            tracing::info!("🏛️  ARCAT Root:     {}", contract_arcat_root);
+            tracing::info!("📋 ARCAT Registry:  {}", contract_arcat_registry);
+        } else {
+            tracing::warn!("⚠️  Contratos ARCAT no configurados (ejecutar deploy_arcat.js)");
+        }
+
+
         // Modo SOC Hub: si CENTRAL_GATEWAY_URL está definida, este gateway actúa
         // como sensor/relay y reenvía todas las alertas al servidor central.
         let central_gateway_url = std::env::var("CENTRAL_GATEWAY_URL")
@@ -174,6 +228,27 @@ impl AppState {
             deployer_private_key,
             contract_security_audit,
             contract_alert_registry,
+            contract_arcat_root,
+            contract_arcat_registry,
+            contract_dg_dgr,
+            contract_dg_dgc,
+            contract_dg_dgrpi,
+            contract_dg_staff,
+            contract_uo_rec,
+            contract_uo_fis,
+            contract_uo_san,
+            contract_uo_car,
+            contract_uo_reg,
+            contract_uo_rin,
+            contract_uo_pub,
+            contract_uo_adm,
+            contract_uo_rhh,
+            contract_uo_tec,
+            contract_uo_jur,
+            contract_uo_gre,
+            contract_uo_aud,
+            contract_uo_sec,
+
             central_gateway_url,
             started_at: Utc::now(),
         };

@@ -964,6 +964,416 @@ function initIocView() {
   $('nav-ioc')?.addEventListener('click', () => { loadIocCorrelations(); loadIocFeed(); loadUrlhausFeed(); loadThreatFoxFeed(); });
 }
 
+// ── ARCAT Blockchain View Logic ──────────────────────────────
+
+async function loadArcatOverview() {
+  const treeContainer = $('arcat-hierarchy-tree');
+  if (!treeContainer) return;
+
+  // Actualizar la red
+  updateArcatChainInfo();
+
+  treeContainer.innerHTML = `<div class="empty-state"><div class="spin">⏳</div> Cargando jerarquía de ARCAT...</div>`;
+
+  try {
+    const res = await api.getArcatOverview();
+    if (!res.arcat || !res.arcat.configured) {
+      treeContainer.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <p>Contratos ARCAT no configurados en el Gateway.</p>
+        <p style="font-size:12px;color:var(--text-muted)">Asegúrate de que Hardhat local está corriendo y que se han ejecutado los deploys correspondientes.</p>
+      </div>`;
+      return;
+    }
+
+    renderArcatTree(res);
+  } catch (e) {
+    treeContainer.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⚠️</div>
+      <p>Error de conexión con el Gateway: ${e.message}</p>
+    </div>`;
+  }
+}
+
+function updateArcatChainInfo() {
+  const dot = $('arcat-chain-info')?.querySelector('.chain-dot');
+  const networkText = $('arcat-chain-network');
+  const walletAccount = getAccount();
+
+  if (walletAccount) {
+    if (dot) dot.classList.add('connected');
+    if (networkText) networkText.textContent = `Hardhat Local | Admin: ${walletAccount.slice(0, 6)}…${walletAccount.slice(-4)}`;
+  } else {
+    if (dot) dot.classList.remove('connected');
+    if (networkText) networkText.textContent = `Sin conexión blockchain`;
+  }
+}
+
+function renderArcatTree(res) {
+  const treeContainer = $('arcat-hierarchy-tree');
+  if (!treeContainer) return;
+
+  const data = res.unidades;
+  const overview = res.arcat;
+
+  const treeStructure = [
+    {
+      name: "Dirección General de Rentas",
+      code: "DGR",
+      address: overview.dg_rentas,
+      unidades: [
+        { name: "De Recaudación", code: "UO-REC", address: data.dgr.uo_recaudacion },
+        { name: "De Fiscalización", code: "UO-FIS", address: data.dgr.uo_fiscalizacion }
+      ]
+    },
+    {
+      name: "Dirección General de Catastro",
+      code: "DGC",
+      address: overview.dg_catastro,
+      unidades: [
+        { name: "De Saneamiento de Título", code: "UO-SAN", address: data.dgc.uo_saneamiento },
+        { name: "De Cartografía", code: "UO-CAR", address: data.dgc.uo_cartografia },
+        { name: "De Registro Territorial", code: "UO-REG", address: data.dgc.uo_registro_territorial }
+      ]
+    },
+    {
+      name: "Dir. Gral. de Registro de la Propiedad Inmueble",
+      code: "DGRPI",
+      address: overview.dg_dgrpi,
+      unidades: [
+        { name: "De Registración Inmobiliaria", code: "UO-RIN", address: data.dgrpi.uo_registracion },
+        { name: "De Publicidad Inmob. y Medidas Cautelares", code: "UO-PUB", address: data.dgrpi.uo_publicidad }
+      ]
+    },
+    {
+      name: "Dependencias Staff ARCAT",
+      code: "STAFF",
+      address: overview.dg_staff,
+      unidades: [
+        { name: "De Administración", code: "UO-ADM", address: data.staff.uo_administracion },
+        { name: "De Capital Humano", code: "UO-RHH", address: data.staff.uo_capital_humano },
+        { name: "De Tecnologías / Sistemas", code: "UO-TEC", address: data.staff.uo_tecnologias },
+        { name: "De Asuntos Jurídicos", code: "UO-JUR", address: data.staff.uo_juridicos },
+        { name: "De Gestión y Recaudación", code: "UO-GRE", address: data.staff.uo_gre },
+        { name: "Auditoría Interna", code: "UO-AUD", address: data.staff.uo_auditoria },
+        { name: "Secretaría General", code: "UO-SEC", address: data.staff.uo_secretaria }
+      ]
+    }
+  ];
+
+  treeContainer.innerHTML = treeStructure.map(dg => {
+    return `
+      <div class="dg-node collapsed" id="dg-node-${dg.code}">
+        <div class="dg-header" id="dg-header-${dg.code}">
+          <div class="dg-header-title">
+            <span>📁</span>
+            <span>${dg.name} (${dg.code})</span>
+          </div>
+          <span class="dg-icon-arrow">▼</span>
+        </div>
+        <div class="uo-list">
+          ${dg.unidades.map(uo => `
+            <div class="uo-item" data-address="${uo.address}" data-code="${uo.code}" data-name="${uo.name}" data-dg="${dg.code}">
+              <div class="uo-item-name">
+                <span>🏛️</span>
+                <span>${uo.name}</span>
+              </div>
+              <span class="uo-device-count" id="count-${uo.address}">Cargando...</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Toggles de Dirección General
+  treeStructure.forEach(dg => {
+    document.getElementById(`dg-header-${dg.code}`)?.addEventListener('click', () => {
+      document.getElementById(`dg-node-${dg.code}`)?.classList.toggle('collapsed');
+    });
+  });
+
+  // Agregar event listener a cada UO
+  treeContainer.querySelectorAll('.uo-item').forEach(item => {
+    item.addEventListener('click', () => {
+      treeContainer.querySelectorAll('.uo-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      selectUnidadOperativa(item.dataset.address, item.dataset.name, item.dataset.code, item.dataset.dg);
+    });
+
+    // Cargar número de dispositivos asíncronamente
+    updateUODeviceCount(item.dataset.address);
+  });
+}
+
+async function updateUODeviceCount(address) {
+  const el = document.getElementById(`count-${address}`);
+  if (!el) return;
+  try {
+    const res = await api.getArcatUnitDevices(address);
+    if (res.total_devices !== undefined) {
+      el.textContent = `${res.total_devices} SBT`;
+    }
+  } catch (e) {
+    el.textContent = "0 SBT";
+  }
+}
+
+async function selectUnidadOperativa(address, name, code, dgCode) {
+  const titleEl = $('arcat-uo-title');
+  const contentEl = $('arcat-uo-content');
+  const btnRegister = $('btn-register-device');
+
+  if (titleEl) titleEl.textContent = `${name} (${code})`;
+  if (btnRegister) {
+    btnRegister.classList.remove('hidden');
+    // Guardar metadata en el botón para usarla al registrar
+    btnRegister.dataset.address = address;
+    btnRegister.dataset.name = name;
+    btnRegister.dataset.code = code;
+    btnRegister.dataset.dg = dgCode;
+  }
+
+  if (contentEl) {
+    contentEl.innerHTML = `
+      <div class="uo-info-banner">
+        <div class="uo-info-block">
+          <span class="uo-info-label">Dirección General</span>
+          <span class="uo-info-value">${dgCode}</span>
+        </div>
+        <div class="uo-info-block">
+          <span class="uo-info-label">Unidad Operativa</span>
+          <span class="uo-info-value">${name}</span>
+        </div>
+        <div class="uo-info-block">
+          <span class="uo-info-label">Contrato Blockchain</span>
+          <span class="uo-info-value addr">${address}</span>
+        </div>
+      </div>
+      
+      <div class="section-title">Inventario de Dispositivos Tokenizados (SBT)</div>
+      <div class="table-container" id="arcat-devices-table">
+        <div class="empty-state"><div class="spin">⏳</div> Cargando dispositivos...</div>
+      </div>
+
+      <div class="section-title">Timeline de Trazabilidad y Auditorías</div>
+      <div class="audits-timeline" id="arcat-audits-timeline">
+        <p class="empty-state-detail" style="height:150px">Selecciona un dispositivo del inventario para auditar sus eventos.</p>
+      </div>
+    `;
+
+    // Cargar inventario de dispositivos
+    loadUODevices(address, code, dgCode);
+  }
+}
+
+async function loadUODevices(address, uoCode, dgCode) {
+  const tableContainer = $('arcat-devices-table');
+  if (!tableContainer) return;
+
+  try {
+    const res = await api.getArcatUnitDevices(address);
+    const devices = res.devices || [];
+
+    if (!devices.length) {
+      tableContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🖥️</div>
+          <p>No hay dispositivos tokenizados en esta Unidad Operativa.</p>
+        </div>
+      `;
+      return;
+    }
+
+    tableContainer.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Token ID</th>
+            <th>Nombre del Dispositivo</th>
+            <th>Hostname</th>
+            <th>UUID</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Threat Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${devices.map(d => {
+            const dev = d.device;
+            const activeStatus = dev.isActive ? '<span class="status-dot online" style="display:inline-block;position:static;margin-right:5px"></span>Activo' : '<span class="status-dot offline" style="display:inline-block;position:static;margin-right:5px"></span>Inactivo';
+            const threatClass = (d.threat_level || 'CLEAN').toLowerCase();
+            return `
+              <tr class="device-row" data-token-id="${dev.tokenId}" data-hostname="${dev.hostname}">
+                <td class="mono">#${dev.tokenId}</td>
+                <td style="font-weight:600">${dev.deviceName}</td>
+                <td class="mono">${dev.hostname}</td>
+                <td class="mono">${dev.uuid}</td>
+                <td><span class="badge badge-INFO">${dev.deviceType}</span></td>
+                <td>${activeStatus}</td>
+                <td><span class="threat-badge ${threatClass}">${d.threat_level || 'CLEAN'} (${dev.threatScore})</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+
+    // Agregar event listener a las filas
+    tableContainer.querySelectorAll('.device-row').forEach(row => {
+      row.addEventListener('click', () => {
+        tableContainer.querySelectorAll('.device-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        loadDeviceAudits(address, row.dataset.tokenId, row.dataset.hostname);
+      });
+    });
+
+  } catch (e) {
+    tableContainer.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <p>Error cargando dispositivos: ${e.message}</p>
+      </div>
+    `;
+  }
+}
+
+async function loadDeviceAudits(uoAddress, tokenId, hostname) {
+  const timeline = $('arcat-audits-timeline');
+  if (!timeline) return;
+
+  timeline.innerHTML = `<div class="empty-state"><div class="spin">⏳</div> Cargando eventos de auditoría...</div>`;
+
+  try {
+    const res = await api.getArcatUnitAudits(uoAddress);
+    const audits = res.audits || [];
+
+    // Filtrar auditorías para este tokenId específico
+    const deviceAudits = audits.filter(a => String(a.tokenId) === String(tokenId));
+
+    if (!deviceAudits.length) {
+      timeline.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🛡️</div>
+          <p>Dispositivo limpio — No se registran alertas de seguridad on-chain para #${tokenId} (${hostname})</p>
+        </div>
+      `;
+      return;
+    }
+
+    timeline.innerHTML = deviceAudits.map(a => {
+      const sevClass = (a.severity || 'INFO').toLowerCase();
+      const date = new Date(Number(a.timestamp) * 1000).toLocaleString('es');
+      const txHash = a.txHash ? a.txHash.slice(0, 10) + '…' + a.txHash.slice(-8) : 'N/A';
+      return `
+        <div class="audit-timeline-item severity-${sevClass}">
+          <div class="audit-timeline-header">
+            <span class="audit-timeline-title">
+              <span class="threat-badge ${sevClass}">${a.severity}</span>
+              <strong>${a.eventType}</strong>
+            </span>
+            <span class="audit-timeline-time">${date}</span>
+          </div>
+          <div class="audit-timeline-desc">${a.description}</div>
+          <div class="audit-timeline-footer">
+            <span class="audit-timeline-meta">📍 IP Origen: <strong>${a.srcIp || 'N/A'}</strong></span>
+            ${a.malwareFamily ? `<span class="audit-timeline-meta">🦠 Familia: <strong>${a.malwareFamily}</strong></span>` : ''}
+            ${a.txHash ? `<a href="https://etherscan.io/tx/${a.txHash}" target="_blank" class="audit-timeline-meta tx">⛓️ Tx: ${txHash}</a>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (e) {
+    timeline.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <p>Error cargando auditorías: ${e.message}</p>
+      </div>
+    `;
+  }
+}
+
+async function registerDeviceMetaMask() {
+  const btn = $('btn-register-device');
+  if (!btn) return;
+
+  const uoAddress = btn.dataset.address;
+  if (!uoAddress) return;
+
+  const account = getAccount();
+  const signer = getSigner();
+
+  if (!account || !signer) {
+    toast("Por favor conecta tu wallet MetaMask primero", "error");
+    return;
+  }
+
+  const name = prompt("Ingrese Nombre del Dispositivo:", "Servidor " + btn.dataset.dg + "-" + btn.dataset.code + "-01");
+  if (!name) return;
+  const hostname = prompt("Ingrese Hostname (debe coincidir con Wazuh):", (btn.dataset.dg + "-" + btn.dataset.code + "-01").toLowerCase());
+  if (!hostname) return;
+  const uuid = prompt("Ingrese UUID del Hardware:", "UUID-" + Math.floor(Math.random()*1000000));
+  if (!uuid) return;
+  
+  const dTypeStr = prompt("Ingrese Tipo (0=Server, 1=Workstation, 2=Firewall, 3=Switch):", "0");
+  if (dTypeStr === null) return;
+  const dType = parseInt(dTypeStr) || 0;
+
+  try {
+    const { Contract } = await import('ethers');
+
+    // 1. Registrar dispositivo en el contrato UO
+    const uoContract = new Contract(uoAddress, [
+      "function registerDevice(address deviceOwner, string deviceName, string uuid, string hostname, uint8 dType) external returns (uint256)",
+      "function getDeviceByHostname(string hostname) external view returns (uint256)"
+    ], signer);
+
+    toast("Iniciando acuñación de SBT en MetaMask...", "info");
+    const tx = await uoContract.registerDevice(account, name, uuid, hostname, dType);
+    toast(`Transacción de acuñación enviada. Esperando confirmación de bloque...`, "info");
+    await tx.wait();
+
+    // 2. Obtener tokenId asignado
+    const tokenId = await uoContract.getDeviceByHostname(hostname);
+    toast(`Dispositivo acuñado con Token ID #${tokenId}. Iniciando registro global...`, "success");
+
+    // 3. Obtener dirección de ArcatRegistry desde el Gateway
+    const overview = await api.getArcatOverview();
+    const registryAddr = overview.arcat.arcat_registry;
+
+    if (!registryAddr || registryAddr === "0x0000000000000000000000000000000000000000") {
+      toast("Error: No se pudo obtener la dirección de ArcatRegistry", "error");
+      return;
+    }
+
+    // 4. Indexar en ArcatRegistry
+    const registryContract = new Contract(registryAddr, [
+      "function adminIndexDevice(address uoContract, uint256 tokenId, string hostname, string uuid, string dgCode, string uoCode) external"
+    ], signer);
+
+    toast("Iniciando indexación global en MetaMask...", "info");
+    const tx2 = await registryContract.adminIndexDevice(uoAddress, tokenId, hostname, uuid, btn.dataset.dg, btn.dataset.code);
+    toast(`Transacción de indexación enviada. Esperando confirmación...`, "info");
+    await tx2.wait();
+
+    toast(`¡Dispositivo #${tokenId} tokenizado e indexado con éxito!`, "success");
+
+    // Recargar vistas
+    selectUnidadOperativa(uoAddress, btn.dataset.name, btn.dataset.code, btn.dataset.dg);
+    updateUODeviceCount(uoAddress);
+
+  } catch (e) {
+    console.error(e);
+    toast("Error en la transacción: " + e.message, "error");
+  }
+}
+
+function initArcatView() {
+  $('nav-arcat')?.addEventListener('click', loadArcatOverview);
+  $('btn-register-device')?.addEventListener('click', registerDeviceMetaMask);
+}
+
 // ── Bootstrap ────────────────────────────────────────────────
 async function init() {
   initRouter();
@@ -974,6 +1384,7 @@ async function init() {
   initAlertsFilters();
   initServicesView();
   initIocView();
+  initArcatView();
 
   // Wallet
   initWalletButton();
@@ -998,10 +1409,11 @@ async function init() {
 
   // Audit cuando se cambia a esa vista
   document.getElementById('nav-audit')?.addEventListener('click', loadAuditTrail);
+  document.getElementById('nav-arcat')?.addEventListener('click', loadArcatOverview);
 
   // Contrato SecurityAudit — mostrar dirección dinámica real del gateway al iniciar
   try {
-    const chain = await checkBlockchain();
+    const chain = await api.checkBlockchain(); // Corrección: usar api.checkBlockchain() en vez de checkBlockchain() ya que se define en api.js
     const contractAddr = chain.contract || import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
     const auditContractEl = $('audit-contract');
     if (auditContractEl) {

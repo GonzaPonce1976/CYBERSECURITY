@@ -1,5 +1,16 @@
 import { expect } from "chai";
 import hre from "hardhat";
+import { getContract } from "viem";
+
+async function getContractInstance(name, address, wallet) {
+  const pc = await hre.viem.getPublicClient();
+  const artifact = await hre.artifacts.readArtifact(name);
+  return getContract({
+    address,
+    abi: artifact.abi,
+    client: { wallet, public: pc },
+  });
+}
 
 /**
  * Tests del contrato SecurityAudit
@@ -11,9 +22,11 @@ describe("SecurityAudit", function () {
     const [owner, gateway, attacker] = await hre.viem.getWalletClients();
     const publicClient = await hre.viem.getPublicClient();
 
-    const contract = await hre.viem.deployContract("SecurityAudit", [
+    const deployed = await hre.viem.deployContract("SecurityAudit", [
       gateway.account.address,
     ]);
+
+    const contract = await getContractInstance("SecurityAudit", deployed.address, owner);
 
     return { contract, owner, gateway, attacker, publicClient };
   }
@@ -48,10 +61,10 @@ describe("SecurityAudit", function () {
       const dataHash =
         "0x" + "ab".repeat(32); // bytes32 de prueba
 
-      const gatewayContract = await hre.viem.getContractAt(
+      const gatewayContract = await getContractInstance(
         "SecurityAudit",
         contract.address,
-        { client: { wallet: gateway } }
+        gateway
       );
 
       await gatewayContract.write.logEvent([
@@ -59,6 +72,8 @@ describe("SecurityAudit", function () {
         "INTRUSION",
         "Intento de login por fuerza bruta",
         dataHash,
+        "", // malwareFamily
+        [], // iocHashes
         "agent-web-01",
         "192.168.1.100",
       ]);
@@ -71,10 +86,10 @@ describe("SecurityAudit", function () {
 
       const dataHash = "0x" + "cd".repeat(32);
 
-      const gatewayContract = await hre.viem.getContractAt(
+      const gatewayContract = await getContractInstance(
         "SecurityAudit",
         contract.address,
-        { client: { wallet: gateway } }
+        gateway
       );
 
       await gatewayContract.write.logEvent([
@@ -82,6 +97,8 @@ describe("SecurityAudit", function () {
         "MALWARE",
         "Hash malicioso detectado",
         dataHash,
+        "", // malwareFamily
+        [], // iocHashes
         "agent-db-02",
         "",
       ]);
@@ -92,6 +109,8 @@ describe("SecurityAudit", function () {
           "MALWARE",
           "Segundo intento con el mismo hash",
           dataHash,
+          "", // malwareFamily
+          [], // iocHashes
           "agent-db-02",
           "",
         ])
@@ -101,10 +120,10 @@ describe("SecurityAudit", function () {
     it("rechaza escrituras desde una cuenta no autorizada", async function () {
       const { contract, attacker } = await deployFixture();
 
-      const attackerContract = await hre.viem.getContractAt(
+      const attackerContract = await getContractInstance(
         "SecurityAudit",
         contract.address,
-        { client: { wallet: attacker } }
+        attacker
       );
 
       await expect(
@@ -113,6 +132,8 @@ describe("SecurityAudit", function () {
           "INTRUSION",
           "Intento de escritura no autorizado",
           "0x" + "ff".repeat(32),
+          "", // malwareFamily
+          [], // iocHashes
           "agent-attacker",
           "10.0.0.1",
         ])
@@ -123,10 +144,10 @@ describe("SecurityAudit", function () {
       const { contract, gateway } = await deployFixture();
       const dataHash = "0x" + "aa".repeat(32);
 
-      const gatewayContract = await hre.viem.getContractAt(
+      const gatewayContract = await getContractInstance(
         "SecurityAudit",
         contract.address,
-        { client: { wallet: gateway } }
+        gateway
       );
 
       expect(await contract.read.isRegistered([dataHash])).to.equal(false);
@@ -136,6 +157,8 @@ describe("SecurityAudit", function () {
         "COMPLIANCE",
         "Evento de compliance",
         dataHash,
+        "", // malwareFamily
+        [], // iocHashes
         "agent-01",
         "",
       ]);
@@ -149,10 +172,10 @@ describe("SecurityAudit", function () {
     it("retorna los últimos N eventos en orden correcto", async function () {
       const { contract, gateway } = await deployFixture();
 
-      const gatewayContract = await hre.viem.getContractAt(
+      const gatewayContract = await getContractInstance(
         "SecurityAudit",
         contract.address,
-        { client: { wallet: gateway } }
+        gateway
       );
 
       // Registrar 3 eventos
@@ -162,6 +185,8 @@ describe("SecurityAudit", function () {
           "ANOMALY",
           `Evento número ${i}`,
           "0x" + i.toString().padStart(2, "0").repeat(32).slice(0, 64),
+          "", // malwareFamily
+          [], // iocHashes
           `agent-${i}`,
           "",
         ]);

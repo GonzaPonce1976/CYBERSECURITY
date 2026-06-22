@@ -27,6 +27,7 @@
           <button class="nav-btn" data-view="ip" id="nav-ip">Reputación IP</button>
           <button class="nav-btn" data-view="cve" id="nav-cve">CVE Lookup</button>
           <button class="nav-btn" data-view="audit" id="nav-audit">Audit Trail</button>
+          <button class="nav-btn" data-view="arcat" id="nav-arcat">🏛️ ARCAT Blockchain</button>
           <button class="nav-btn" data-view="ioc" id="nav-ioc">🦠 IoC Intel</button>
           <button class="nav-btn" data-view="servicios" id="nav-servicios">⚙ Servicios</button>
         </nav>
@@ -547,6 +548,41 @@
 
           </div><!-- /ioc-grid -->
         </div><!-- /view-ioc -->
+
+        <!-- ── ARCAT BLOCKCHAIN VIEW ───────────────────────────── -->
+        <div class="view" id="view-arcat">
+          <div class="view-header">
+            <h1 class="view-title">🏛️ ARCAT Blockchain — Multicontratos SBT</h1>
+            <div class="chain-info" id="arcat-chain-info">
+              <span class="chain-dot"></span>
+              <span id="arcat-chain-network">Sin conexión blockchain</span>
+            </div>
+          </div>
+
+          <div class="arcat-grid">
+            <!-- Columna izquierda: Jerarquía de Organismos -->
+            <div class="card hierarchy-card">
+              <div class="card-header">
+                <h2 class="card-title">Estructura Organizacional</h2>
+              </div>
+              <div class="hierarchy-tree" id="arcat-hierarchy-tree">
+                <p class="empty-state">Conectando con la red ARCAT...</p>
+              </div>
+            </div>
+
+            <!-- Columna derecha: Inventario & Detalles de UO seleccionada -->
+            <div class="card detail-card">
+              <div class="card-header">
+                <h2 class="card-title" id="arcat-uo-title">Selecciona una Unidad Operativa</h2>
+                <button class="btn-primary btn-sm hidden" id="btn-register-device">Acuñar Dispositivo (SBT)</button>
+              </div>
+              
+              <div class="uo-detail-content" id="arcat-uo-content">
+                <p class="empty-state-detail">Selecciona un organismo en el árbol jerárquico para auditar sus dispositivos SBT y logs de trazabilidad.</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </main>
 

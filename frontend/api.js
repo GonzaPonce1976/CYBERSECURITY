@@ -54,5 +54,13 @@ export const api = {
   getUrlhausFeed:  ()       => request('/api/ioc/urlhaus/recent'),
   getThreatFoxFeed:()       => request('/api/ioc/threatfox/recent'),
 
+  // ARCAT Multicontratos SBT
+  getArcatOverview: () => request('/api/arcat/overview'),
+  getArcatDevice: (hostname) => request(`/api/arcat/device/${hostname}`),
+  getArcatDeviceByUuid: (uuid) => request(`/api/arcat/device/uuid/${uuid}`),
+  getArcatUnitAudits: (address) => request(`/api/arcat/unit/${address}/audits`),
+  getArcatUnitDevices: (address) => request(`/api/arcat/unit/${address}/devices`),
+  logArcatAudit: (payload) => request('/api/arcat/audit', { method: 'POST', body: JSON.stringify(payload) }),
+
   BASE: GATEWAY,
 };

@@ -10,3 +10,4 @@ pub mod shodan;
 pub mod malwarebazaar;
 pub mod urlhaus;
 pub mod threatfox;
+pub mod arcat;       // Cliente ARCAT Multicontratos SBT

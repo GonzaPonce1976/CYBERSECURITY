@@ -7,6 +7,7 @@ pub mod audit;
 pub mod health;
 pub mod ws;
 pub mod ioc;
+pub mod arcat;
 
 use axum::Router;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub fn api_router() -> Router<Arc<AppState>> {
         .nest("/audit",  audit::router())
         .nest("/health", health::router())
         .nest("/ioc",    ioc::router())
+        .nest("/arcat",  arcat::router())
 }
 
 /// Construye el router de WebSocket
