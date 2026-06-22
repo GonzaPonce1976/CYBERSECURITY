@@ -3,7 +3,7 @@
  */
 import { api } from './api.js';
 import { toast } from './toast.js';
-import { connectWallet, initWalletButton } from './wallet.js';
+import { connectWallet, initWalletButton, getAccount, getSigner } from './wallet.js';
 import {
   initSeverityChart, updateSeverityChart,
   initTimelineChart, pushTimelinePoint,
