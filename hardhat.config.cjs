@@ -2,6 +2,12 @@ require("@nomicfoundation/hardhat-viem");
 // NOTE: hardhat-chai-matchers v3 es incompatible con Hardhat 2; se usa Hardhat 3 sin él.
 require("dotenv/config");
 
+// Setup chai-as-promised para tests asíncronos con rejectedWith
+const chai = require("chai");
+const chaiAsPromised = require("chai-as-promised");
+chai.use(chaiAsPromised);
+
+
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY ||
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
