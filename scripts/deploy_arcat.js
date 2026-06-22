@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import fs from "fs";
 import path from "path";
+import { getContract } from "viem";
 
 /**
  * deploy_arcat.js — Deploy completo de la arquitectura ARCAT Multicontratos SBT
@@ -60,6 +61,15 @@ const ARCAT_HIERARCHY = [
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+async function getContractInstance(name, address, wallet, publicClient) {
+  const artifact = await hre.artifacts.readArtifact(name);
+  return getContract({
+    address,
+    abi: artifact.abi,
+    client: { wallet, public: publicClient },
+  });
+}
+
 async function main() {
   const network = hre.network.name;
   const [deployer] = await hre.viem.getWalletClients();
@@ -89,15 +99,17 @@ async function main() {
 
   // ── 1. ArcatRoot ────────────────────────────────────────────────────────────
   console.log("⏳ [1/4] Desplegando ArcatRoot (Gobernanza)...");
-  const arcatRoot = await hre.viem.deployContract("ArcatRoot", [deployerAddr]);
-  const arcatRootAddr = arcatRoot.address;
+  const arcatRootDeployed = await hre.viem.deployContract("ArcatRoot", [deployerAddr]);
+  const arcatRootAddr = arcatRootDeployed.address;
+  const arcatRoot = await getContractInstance("ArcatRoot", arcatRootAddr, deployer, publicClient);
   output.contracts.ArcatRoot = arcatRootAddr;
   console.log(`   ✅ ArcatRoot: ${arcatRootAddr}`);
 
   // ── 2. ArcatRegistry ────────────────────────────────────────────────────────
   console.log("\n⏳ [2/4] Desplegando ArcatRegistry (Indice Global)...");
-  const arcatRegistry = await hre.viem.deployContract("ArcatRegistry", [arcatRootAddr]);
-  const arcatRegistryAddr = arcatRegistry.address;
+  const arcatRegistryDeployed = await hre.viem.deployContract("ArcatRegistry", [arcatRootAddr]);
+  const arcatRegistryAddr = arcatRegistryDeployed.address;
+  const arcatRegistry = await getContractInstance("ArcatRegistry", arcatRegistryAddr, deployer, publicClient);
   output.contracts.ArcatRegistry = arcatRegistryAddr;
   console.log(`   ✅ ArcatRegistry: ${arcatRegistryAddr}`);
 
@@ -111,13 +123,14 @@ async function main() {
   for (const dg of ARCAT_HIERARCHY) {
     console.log(`\n   📁 Desplegando DireccionGeneral: ${dg.name} (${dg.code})`);
 
-    const dgContract = await hre.viem.deployContract("DireccionGeneral", [
+    const dgContractDeployed = await hre.viem.deployContract("DireccionGeneral", [
       dg.name,
       dg.code,
       arcatRootAddr,
       deployerAddr, // gateway = deployer en local; en producción = rust-gateway address
     ]);
-    const dgAddr = dgContract.address;
+    const dgAddr = dgContractDeployed.address;
+    const dgContract = await getContractInstance("DireccionGeneral", dgAddr, deployer, publicClient);
 
     output.contracts.DireccionesGenerales[dg.code] = {
       name: dg.name,
