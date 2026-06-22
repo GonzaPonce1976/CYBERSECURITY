@@ -56,9 +56,17 @@ Una **plataforma descentralizada de inteligencia de amenazas** que combina:
 
 ## Smart Contracts
 
-- `SecurityAudit.sol` — Registro inmutable de eventos de seguridad
+- `SecurityAudit.sol` — Registro inmutable de eventos de seguridad global
 - `AlertRegistry.sol` — Alertas críticas clasificadas por severidad
 - `ThreatIntel.sol` — IoCs verificados (IPs maliciosas, hashes)
+
+### 🏛️ Arquitectura ARCAT Multicontratos SBT (Soulbound Tokens)
+
+Esta arquitectura avanzada jerárquica modela la estructura de ARCAT en la blockchain:
+- `ArcatRoot.sol` — Gobernanza central y registro de Direcciones Generales autorizadas
+- `DireccionGeneral.sol` — Contrato fábrica (Factory) que gestiona y despliega las Unidades Operativas asociadas
+- `UnidadOperativaSBT.sol` — Contrato ERC-721 modificado (Soulbound / No transferible). Cada dispositivo es acuñado como un SBT único con su historial de auditorías particular
+- `ArcatRegistry.sol` — Índice global para búsquedas ultra-rápidas por Hostname/UUID de dispositivos
 
 ## Comandos Principales
 
@@ -68,6 +76,9 @@ npm run docker:up
 
 # Desarrollar contratos en red local
 npm run dev:contracts
+
+# Desplegar contratos ARCAT en localhost
+npm run deploy:arcat:local
 
 # Levantar el gateway Rust
 npm run dev:gateway
@@ -81,4 +92,4 @@ npm test
 
 ---
 
-*Proyecto iniciado: 2026-05-08 | Versión: 0.1.0*
+*Proyecto iniciado: 2026-05-08 | Versión: 0.2.0 (ARCAT Blockchain Edition)*
