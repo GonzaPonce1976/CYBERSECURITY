@@ -5,6 +5,15 @@ param(
 # Configurar TLS 1.2/1.3 para peticiones externas
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 
+# Resolver carpeta de log de forma 100% segura para CustomActions de MSI (donde PSScriptRoot puede ser nulo)
+$ScriptFolder = "C:\Program Files\CybersecGateway"
+if ($PSScriptRoot) {
+    $ScriptFolder = $PSScriptRoot
+} elseif ($MyInvocation -and $MyInvocation.MyCommand -and $MyInvocation.MyCommand.Path) {
+    $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+$LogPath = Join-Path $ScriptFolder "notify_new_device.log"
+
 $hostname = $env:COMPUTERNAME.ToLower()
 
 # Obtener UUID de hardware de forma segura
@@ -53,7 +62,8 @@ $url = "http://$GatewayIp:8080/api/alerts/webhook"
 try {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
     $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "application/json; charset=utf-8" -Body $bytes -TimeoutSec 10
-    Set-Content -Path (Join-Path $PSScriptRoot "notify_new_device.log") -Value "Alerta enviada correctamente a $url. Response: $response"
+    Set-Content -Path $LogPath -Value "Alerta enviada correctamente a $url. Response: $response"
 } catch {
-    Set-Content -Path (Join-Path $PSScriptRoot "notify_new_device.log") -Value "Error enviando alerta a $url: $_"
+    Set-Content -Path $LogPath -Value "Error enviando alerta a $url: $_"
 }
+

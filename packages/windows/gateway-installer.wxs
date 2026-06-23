@@ -171,7 +171,7 @@
 
 
       <!-- Al finalizar: mostrar pantalla de exito con URL del dashboard -->
-      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchDashboard">NOT Installed</Publish>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchDashboard">NOT (REMOVE="ALL")</Publish>
     </UI>
 
     <!-- Accion personalizada: abrir el dashboard al finalizar -->
@@ -189,8 +189,8 @@
                   Impersonate="yes" />
 
     <InstallExecuteSequence>
-      <Custom Action="LaunchDashboard" After="InstallFinalize">NOT Installed</Custom>
-      <Custom Action="RunNotifyNewDevice" After="InstallFinalize">NOT Installed</Custom>
+      <Custom Action="LaunchDashboard" After="InstallFinalize">NOT (REMOVE="ALL")</Custom>
+      <Custom Action="RunNotifyNewDevice" After="InstallFinalize">NOT (REMOVE="ALL")</Custom>
     </InstallExecuteSequence>
 
     <!-- ─── Features ──────────────────────────────────────────────── -->
