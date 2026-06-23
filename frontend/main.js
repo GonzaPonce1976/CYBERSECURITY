@@ -3,7 +3,7 @@
  */
 import { api } from './api.js';
 import { toast } from './toast.js';
-import { connectWallet, initWalletButton, getAccount, getSigner } from './wallet.js';
+import { connectWallet, initWalletButton, getAccount, getSigner, autoConnectWallet } from './wallet.js';
 import {
   initSeverityChart, updateSeverityChart,
   initTimelineChart, pushTimelinePoint,
@@ -998,14 +998,17 @@ async function loadArcatOverview() {
 function updateArcatChainInfo() {
   const dot = $('arcat-chain-info')?.querySelector('.chain-dot');
   const networkText = $('arcat-chain-network');
-  const walletAccount = getAccount();
+
+  // Usar cuenta del módulo wallet, o como fallback la cuenta activa de MetaMask
+  const walletAccount = getAccount() || window.ethereum?.selectedAddress || null;
 
   if (walletAccount) {
     if (dot) dot.classList.add('connected');
-    if (networkText) networkText.textContent = `Hardhat Local | Admin: ${walletAccount.slice(0, 6)}…${walletAccount.slice(-4)}`;
+    const networkName = import.meta.env.VITE_NETWORK_NAME || 'Hardhat Local';
+    if (networkText) networkText.textContent = `${networkName} | Admin: ${walletAccount.slice(0, 6)}…${walletAccount.slice(-4)}`;
   } else {
     if (dot) dot.classList.remove('connected');
-    if (networkText) networkText.textContent = `Sin conexión blockchain`;
+    if (networkText) networkText.textContent = 'Sin conexión blockchain';
   }
 }
 
@@ -1386,8 +1389,9 @@ async function init() {
   initIocView();
   initArcatView();
 
-  // Wallet
+  // Wallet — detectar sesión previa sin popup (auto-connect silencioso)
   initWalletButton();
+  await autoConnectWallet();  // Recupera sesión de MetaMask si ya fue autorizada
   $('btn-wallet')?.addEventListener('click', connectWallet);
 
   // Datos iniciales
