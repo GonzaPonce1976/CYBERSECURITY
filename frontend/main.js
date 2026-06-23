@@ -1297,6 +1297,170 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname) {
   }
 }
 
+// Inyectar estilos CSS para el modal de acuñación automatizada
+const arcatModalStyle = document.createElement('style');
+arcatModalStyle.innerHTML = `
+  .arcat-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: arcatFadeIn 0.25s ease-out;
+  }
+  .arcat-modal {
+    background: #0b1329;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    width: 92%;
+    max-width: 520px;
+    padding: 28px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    color: #e2e8f0;
+    font-family: inherit;
+    animation: arcatScaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .arcat-modal-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #10b981;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .arcat-modal-desc {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .arcat-device-list {
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+  }
+  .arcat-device-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .arcat-device-list::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 4px;
+  }
+  .arcat-device-list::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+  }
+  .arcat-device-list::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+  .arcat-device-item {
+    background: #111d35;
+    border: 1px solid #27354f;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .arcat-device-item:hover {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+  }
+  .arcat-device-icon {
+    font-size: 1.8rem;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .arcat-device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-grow: 1;
+  }
+  .arcat-device-name {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 1rem;
+  }
+  .arcat-device-details {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  .arcat-device-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-family: monospace;
+    margin-top: 2px;
+  }
+  .arcat-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #1e293b;
+    padding-top: 20px;
+  }
+  .arcat-btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .arcat-btn-primary {
+    background: #10b981;
+    color: #0b1329;
+  }
+  .arcat-btn-primary:hover {
+    background: #059669;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+  }
+  .arcat-btn-secondary {
+    background: transparent;
+    border-color: #334155;
+    color: #94a3b8;
+  }
+  .arcat-btn-secondary:hover {
+    border-color: #475569;
+    color: #e2e8f0;
+  }
+  .arcat-spin {
+    display: inline-block;
+    animation: arcatRotate 1.2s infinite linear;
+  }
+  @keyframes arcatFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes arcatScaleIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes arcatRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(arcatModalStyle);
+
 async function registerDeviceMetaMask() {
   const btn = $('btn-register-device');
   if (!btn) return;
@@ -1312,9 +1476,142 @@ async function registerDeviceMetaMask() {
     return;
   }
 
-  const name = prompt("Ingrese Nombre del Dispositivo:", "Servidor " + btn.dataset.dg + "-" + btn.dataset.code + "-01");
+  // 1. Mostrar pantalla de carga (overlay)
+  const overlay = document.createElement('div');
+  overlay.className = 'arcat-modal-overlay';
+  overlay.innerHTML = `
+    <div class="arcat-modal" style="text-align: center;">
+      <div class="arcat-modal-title" style="justify-content: center;">
+        <span class="arcat-spin">⏳</span> Buscando nuevos dispositivos
+      </div>
+      <p class="arcat-modal-desc">
+        Consultando el historial de alertas del Gateway en busca de clientes recién instalados...
+      </p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  try {
+    // 2. Obtener alertas recientes y filtrar NEW_DEVICE_DETECTED
+    const alertsData = await api.getAlerts({ limit: 100 });
+    const alerts = alertsData.data || [];
+    const pendingAlerts = alerts.filter(a => a.event_type === "NEW_DEVICE_DETECTED");
+
+    // 3. Parsear y validar contra blockchain cuáles están realmente pendientes
+    const pendingDevices = [];
+    for (const alert of pendingAlerts) {
+      const desc = alert.description;
+      const nameMatch = desc.match(/Nombre:\s*([^|]+)/);
+      const hostMatch = desc.match(/Hostname:\s*([^|]+)/);
+      const uuidMatch = desc.match(/UUID:\s*([^|]+)/);
+      const typeMatch = desc.match(/Tipo:\s*(\d+)/);
+
+      if (hostMatch && uuidMatch) {
+        const hostname = hostMatch[1].trim();
+        const uuid = uuidMatch[1].trim();
+        const name = nameMatch ? nameMatch[1].trim() : `Dispositivo ${hostname}`;
+        const type = typeMatch ? parseInt(typeMatch[1]) : 1;
+
+        // Comprobar si ya está registrado en la blockchain (evitar duplicados)
+        try {
+          const check = await api.getArcatDevice(hostname);
+          if (check.status !== 'ok') {
+            if (!pendingDevices.some(d => d.hostname === hostname)) {
+              pendingDevices.push({ name, hostname, uuid, type });
+            }
+          }
+        } catch {
+          if (!pendingDevices.some(d => d.hostname === hostname)) {
+            pendingDevices.push({ name, hostname, uuid, type });
+          }
+        }
+      }
+    }
+
+    // 4. Mostrar modal con opciones de selección
+    if (pendingDevices.length === 0) {
+      // Caso A: No hay dispositivos pendientes
+      overlay.innerHTML = `
+        <div class="arcat-modal">
+          <div class="arcat-modal-title">
+            <span>🖥️</span> No hay dispositivos pendientes
+          </div>
+          <p class="arcat-modal-desc">
+            No se detectaron nuevas instalaciones de clientes en la red LAN. ¿Deseas realizar una carga manual ingresando los datos tú mismo?
+          </p>
+          <div class="arcat-modal-actions">
+            <button class="arcat-btn arcat-btn-secondary" id="btn-modal-cancel">Cancelar</button>
+            <button class="arcat-btn arcat-btn-primary" id="btn-modal-manual">Carga Manual</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-modal-cancel').onclick = () => overlay.remove();
+      document.getElementById('btn-modal-manual').onclick = () => {
+        overlay.remove();
+        triggerManualPromptMinting(uoAddress, btn.dataset.dg, btn.dataset.code, account, signer);
+      };
+    } else {
+      // Caso B: Hay dispositivos detectados listos para acuñar automáticamente
+      overlay.innerHTML = `
+        <div class="arcat-modal">
+          <div class="arcat-modal-title">
+            <span>🖥️</span> Dispositivos Pendientes Detectados
+          </div>
+          <p class="arcat-modal-desc">
+            Selecciona un dispositivo instalado en la red LAN para acuñar su token SBT de forma automatizada:
+          </p>
+          <div class="arcat-device-list">
+            ${pendingDevices.map((d, index) => `
+              <div class="arcat-device-item" data-index="${index}">
+                <div class="arcat-device-icon">💻</div>
+                <div class="arcat-device-info">
+                  <div class="arcat-device-name">${d.name}</div>
+                  <div class="arcat-device-details">
+                    Hostname: <strong>${d.hostname}</strong> · Tipo: ${d.type === 0 ? 'Server' : 'Workstation'}
+                  </div>
+                  <div class="arcat-device-meta">UUID: ${d.uuid}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="arcat-modal-actions">
+            <button class="arcat-btn arcat-btn-secondary" id="btn-modal-cancel">Cancelar</button>
+            <button class="arcat-btn arcat-btn-secondary" id="btn-modal-manual" style="border-style: dashed;">Ingreso Manual</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-modal-cancel').onclick = () => overlay.remove();
+      document.getElementById('btn-modal-manual').onclick = () => {
+        overlay.remove();
+        triggerManualPromptMinting(uoAddress, btn.dataset.dg, btn.dataset.code, account, signer);
+      };
+
+      // Listener para cada ítem de dispositivo detectado
+      overlay.querySelectorAll('.arcat-device-item').forEach(item => {
+        item.onclick = async () => {
+          const dev = pendingDevices[parseInt(item.dataset.index)];
+          overlay.remove();
+          // Proceder directamente a acuñar con los datos automatizados!
+          await executeBlockchainMinting(uoAddress, dev.name, dev.uuid, dev.hostname, dev.type, btn.dataset.dg, btn.dataset.code, account, signer);
+        };
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+    overlay.remove();
+    toast("Error consultando dispositivos pendientes: " + err.message, "error");
+    // Fallback a carga manual
+    triggerManualPromptMinting(uoAddress, btn.dataset.dg, btn.dataset.code, account, signer);
+  }
+}
+
+async function triggerManualPromptMinting(uoAddress, dgCode, uoCode, account, signer) {
+  const name = prompt("Ingrese Nombre del Dispositivo:", "Servidor " + dgCode + "-" + uoCode + "-01");
   if (!name) return;
-  const hostname = prompt("Ingrese Hostname (debe coincidir con Wazuh):", (btn.dataset.dg + "-" + btn.dataset.code + "-01").toLowerCase());
+  const hostname = prompt("Ingrese Hostname (debe coincidir con Wazuh):", (dgCode + "-" + uoCode + "-01").toLowerCase());
   if (!hostname) return;
   const uuid = prompt("Ingrese UUID del Hardware:", "UUID-" + Math.floor(Math.random()*1000000));
   if (!uuid) return;
@@ -1323,6 +1620,10 @@ async function registerDeviceMetaMask() {
   if (dTypeStr === null) return;
   const dType = parseInt(dTypeStr) || 0;
 
+  await executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, dgCode, uoCode, account, signer);
+}
+
+async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, dgCode, uoCode, account, signer) {
   try {
     const { Contract } = await import('ethers');
 
@@ -1332,7 +1633,7 @@ async function registerDeviceMetaMask() {
       "function getDeviceByHostname(string hostname) external view returns (uint256)"
     ], signer);
 
-    toast("Iniciando acuñación de SBT en MetaMask...", "info");
+    toast(`Iniciando acuñación automatizada de SBT para ${hostname} en MetaMask...`, "info");
     const tx = await uoContract.registerDevice(account, name, uuid, hostname, dType);
     toast(`Transacción de acuñación enviada. Esperando confirmación de bloque...`, "info");
     await tx.wait();
@@ -1356,14 +1657,14 @@ async function registerDeviceMetaMask() {
     ], signer);
 
     toast("Iniciando indexación global en MetaMask...", "info");
-    const tx2 = await registryContract.adminIndexDevice(uoAddress, tokenId, hostname, uuid, btn.dataset.dg, btn.dataset.code);
+    const tx2 = await registryContract.adminIndexDevice(uoAddress, tokenId, hostname, uuid, dgCode, uoCode);
     toast(`Transacción de indexación enviada. Esperando confirmación...`, "info");
     await tx2.wait();
 
-    toast(`¡Dispositivo #${tokenId} tokenizado e indexado con éxito!`, "success");
+    toast(`¡Dispositivo #${tokenId} (${hostname}) tokenizado e indexado con éxito!`, "success");
 
     // Recargar vistas
-    selectUnidadOperativa(uoAddress, btn.dataset.name, btn.dataset.code, btn.dataset.dg);
+    selectUnidadOperativa(uoAddress, name, uoCode, dgCode);
     updateUODeviceCount(uoAddress);
 
   } catch (e) {
