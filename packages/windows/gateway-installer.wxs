@@ -130,6 +130,15 @@
         <Environment Id="EnvOtx" Action="set" Name="OTX_API_KEY" Value="[OTX_API_KEY]" System="yes" Part="all" />
         <Environment Id="EnvNvd" Action="set" Name="NVD_API_KEY" Value="[NVD_API_KEY]" System="yes" Part="all" />
       </Component>
+
+      <!-- Script para notificar nuevo dispositivo -->
+      <Component Id="NotifyNewDeviceScript"
+                 Guid="c1d2e3f4-a5b6-7890-abcd-ef1234567890"
+                 Win64="yes">
+        <File Id="NotifyNewDevicePs1"
+              Source="notify_new_device.ps1"
+              KeyPath="yes" />
+      </Component>
     </DirectoryRef>
 
     <!-- Acceso directo en el menu Inicio -->
@@ -172,8 +181,16 @@
                   Return="asyncNoWait"
                   Impersonate="yes" />
 
+    <!-- Accion personalizada: notificar nuevo dispositivo -->
+    <CustomAction Id="RunNotifyNewDevice"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="[SystemFolder]WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]notify_new_device.ps1&quot; -GatewayIp &quot;[GATEWAY_SERVER_IP]&quot;"
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+
     <InstallExecuteSequence>
       <Custom Action="LaunchDashboard" After="InstallFinalize">NOT Installed</Custom>
+      <Custom Action="RunNotifyNewDevice" After="InstallFinalize">NOT Installed</Custom>
     </InstallExecuteSequence>
 
     <!-- ─── Features ──────────────────────────────────────────────── -->
@@ -183,6 +200,7 @@
       <ComponentRef Id="GatewayEnvFile" />
       <ComponentRef Id="GatewayEnvironmentVariables" />
       <ComponentRef Id="ApplicationShortcuts" />
+      <ComponentRef Id="NotifyNewDeviceScript" />
     </Feature>
 
   </Product>
