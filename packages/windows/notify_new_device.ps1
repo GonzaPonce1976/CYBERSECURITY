@@ -64,6 +64,6 @@ try {
     $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "application/json; charset=utf-8" -Body $bytes -TimeoutSec 10
     Set-Content -Path $LogPath -Value "Alerta enviada correctamente a $url. Response: $response"
 } catch {
-    Set-Content -Path $LogPath -Value "Error enviando alerta a $url: $_"
+    Set-Content -Path $LogPath -Value "Error enviando alerta a $url - Detalle: $_"
 }
 
