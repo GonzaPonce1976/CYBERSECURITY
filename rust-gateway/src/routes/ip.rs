@@ -1,5 +1,6 @@
-//! Ruta de reputación de IPs — /api/ip/:ip
-//! Agrega datos de AbuseIPDB + GreyNoise + OTX en paralelo
+//! Rutas de reputación de IPs y auditoría de exposición perimetral (Shodan)
+//! - GET /api/ip/{ip}/reputation   — Consulta AbuseIPDB + VirusTotal + GreyNoise + OTX + Shodan
+//! - GET /api/ip/exposures         — Lista IPs con datos de exposición Shodan del histórico
 
 use axum::{extract::{Path, State}, response::Json, routing::get, Router};
 use serde_json::{json, Value};
@@ -8,9 +9,12 @@ use tracing::{error, info};
 use crate::state::AppState;
 
 pub fn router() -> Router<Arc<AppState>> {
+    // IMPORTANTE: En Axum, la ruta estática "/exposures" DEBE registrarse ANTES
+    // que el patrón dinámico "/{ip}/reputation" para evitar que Axum capture
+    // "exposures" como una variable de IP.  El orden de .route() importa.
     Router::new()
-        .route("/exposures", get(list_exposures))
-        .route("/{ip}/reputation", get(ip_reputation))
+        .route("/exposures", get(list_exposures))          // estática — tiene precedencia
+        .route("/{ip}/reputation", get(ip_reputation))     // dinámica — sólo si no matchea antes
 }
 
 async fn ip_reputation(
@@ -151,9 +155,8 @@ async fn list_exposures(
                 if let Some(shodan) = value.get("shodan") {
                     let has_ports = shodan.get("ports").and_then(|p| p.as_array()).map(|a| !a.is_empty()).unwrap_or(false);
                     let has_vulns = shodan.get("vulnerabilities").and_then(|v| v.as_array()).map(|a| !a.is_empty()).unwrap_or(false);
-                    
+
                     if has_ports || has_vulns {
-                        // Inject scanned_at timestamp
                         if let Some(obj) = value.as_object_mut() {
                             obj.insert("scanned_at".to_string(), json!(created_at));
                         }
@@ -164,8 +167,73 @@ async fn list_exposures(
         }
     }
 
+    // Si no hay datos reales en el historial, retornar datos simulados de ejemplo
+    // para que el panel de Auditoría Perimetral Shodan siempre muestre información útil.
+    // Estos datos reflejan exposiciones típicas de una red corporativa Argentina.
+    if exposures.is_empty() {
+        let now = chrono::Utc::now().to_rfc3339();
+        let simulated = vec![
+            json!({
+                "ip": "192.168.125.38",
+                "shodan": {
+                    "ports": [22, 80, 443, 8080],
+                    "isp": "Telecom Argentina S.A.",
+                    "os": "Ubuntu Linux 22.04",
+                    "org": "AR-TELECOM-AS",
+                    "country": "Argentina",
+                    "vulnerabilities": ["CVE-2023-44487", "CVE-2021-44228"]
+                },
+                "scanned_at": now
+            }),
+            json!({
+                "ip": "192.168.125.250",
+                "shodan": {
+                    "ports": [22, 80, 443, 3389],
+                    "isp": "Telecom Argentina S.A.",
+                    "os": "Windows Server 2022",
+                    "org": "AR-TELECOM-AS",
+                    "country": "Argentina",
+                    "vulnerabilities": ["CVE-2024-3400"]
+                },
+                "scanned_at": now
+            }),
+            json!({
+                "ip": "192.168.125.21",
+                "shodan": {
+                    "ports": [80, 443, 502],
+                    "isp": "Claro Argentina S.A.",
+                    "os": "Linux",
+                    "org": "CLAR-AR",
+                    "country": "Argentina",
+                    "vulnerabilities": ["CVE-2018-11442"]
+                },
+                "scanned_at": now
+            }),
+            json!({
+                "ip": "192.168.125.23",
+                "shodan": {
+                    "ports": [22, 80, 443, 8443],
+                    "isp": "Telecom Argentina S.A.",
+                    "os": "Debian Linux 11",
+                    "org": "AR-TELECOM-AS",
+                    "country": "Argentina",
+                    "vulnerabilities": []
+                },
+                "scanned_at": now
+            }),
+        ];
+
+        return Json(json!({
+            "status": "ok",
+            "source": "simulated",
+            "data": simulated
+        }));
+    }
+
     Json(json!({
         "status": "ok",
+        "source": "db",
         "data": exposures
     }))
 }
+

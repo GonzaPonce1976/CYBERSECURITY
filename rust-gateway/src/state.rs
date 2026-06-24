@@ -5,7 +5,6 @@ use std::sync::Arc;
 use dashmap::DashMap;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
-use rusqlite::{Error, types};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 
@@ -292,50 +291,67 @@ impl AppState {
         Ok(())
     }
 
-    /// Carga datos persistentes desde la base de datos a la memoria
+    /// Carga datos persistentes desde la base de datos a la memoria.
+    /// Las filas con formato inválido (esquema desactualizado) se omiten con un warning
+    /// en lugar de crashear el gateway al arrancar.
     fn load_persistent_data(&mut self) -> Result<()> {
         let conn = self.db_pool.get()?;
 
-        // Cargar alertas
+        // Cargar alertas — tolerante a rows con esquema antiguo
         let mut stmt = conn.prepare("SELECT id, data FROM alerts")?;
-        let alert_iter = stmt.query_map([], |row| {
-            let id: String = row.get(0)?;
-            let data: String = row.get(1)?;
-            let alert: Alert = serde_json::from_str(&data).map_err(|e| Error::FromSqlConversionFailure(0, types::Type::Text, Box::new(e)))?;
-            Ok((id, alert))
-        })?;
+        let alert_rows: Vec<(String, String)> = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
 
-        for result in alert_iter {
-            let (id, alert) = result?;
-            self.alerts_cache.insert(id, alert);
+        let mut alerts_loaded = 0usize;
+        let mut alerts_skipped = 0usize;
+        for (id, data) in alert_rows {
+            match serde_json::from_str::<Alert>(&data) {
+                Ok(alert) => {
+                    self.alerts_cache.insert(id, alert);
+                    alerts_loaded += 1;
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️  Alerta con esquema desactualizado omitida (id={}): {}", id, e);
+                    alerts_skipped += 1;
+                }
+            }
         }
+        if alerts_skipped > 0 {
+            tracing::warn!("⚠️  {} alertas omitidas por esquema inválido. Ejecuta STOP + START para limpiar la caché.", alerts_skipped);
+        }
+        tracing::info!("📦 Alertas cargadas desde DB: {} ok, {} omitidas", alerts_loaded, alerts_skipped);
 
-        // Cargar IP cache
+        // Cargar IP cache — tolerante a rows con esquema antiguo
         let mut stmt = conn.prepare("SELECT ip, data FROM ip_cache")?;
-        let ip_iter = stmt.query_map([], |row| {
-            let ip: String = row.get(0)?;
-            let data: String = row.get(1)?;
-            let value: serde_json::Value = serde_json::from_str(&data).map_err(|e| Error::FromSqlConversionFailure(0, types::Type::Text, Box::new(e)))?;
-            Ok((ip, value))
-        })?;
+        let ip_rows: Vec<(String, String)> = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
 
-        for result in ip_iter {
-            let (ip, value) = result?;
-            self.ip_cache.insert(ip, value);
+        for (ip, data) in ip_rows {
+            match serde_json::from_str::<serde_json::Value>(&data) {
+                Ok(value) => { self.ip_cache.insert(ip, value); }
+                Err(e) => { tracing::warn!("⚠️  IP cache row omitida ({}): {}", ip, e); }
+            }
         }
 
-        // Cargar CVE cache
+        // Cargar CVE cache — tolerante a rows con esquema antiguo
         let mut stmt = conn.prepare("SELECT cve_id, data FROM cve_cache")?;
-        let cve_iter = stmt.query_map([], |row| {
-            let cve_id: String = row.get(0)?;
-            let data: String = row.get(1)?;
-            let value: serde_json::Value = serde_json::from_str(&data).map_err(|e| Error::FromSqlConversionFailure(0, types::Type::Text, Box::new(e)))?;
-            Ok((cve_id, value))
-        })?;
+        let cve_rows: Vec<(String, String)> = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
 
-        for result in cve_iter {
-            let (cve_id, value) = result?;
-            self.cve_cache.insert(cve_id, value);
+        for (cve_id, data) in cve_rows {
+            match serde_json::from_str::<serde_json::Value>(&data) {
+                Ok(value) => { self.cve_cache.insert(cve_id, value); }
+                Err(e) => { tracing::warn!("⚠️  CVE cache row omitida ({}): {}", cve_id, e); }
+            }
         }
 
         Ok(())

@@ -1,0 +1,93 @@
+{
+  "network": "localhost",
+  "deployedAt": "2026-06-24T11:22:37.408Z",
+  "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "contracts": {
+    "ArcatRoot": "0x7969c5ed335650692bc04293b07f5bf2e7a673c0",
+    "ArcatRegistry": "0x7bc06c482dead17c0e297afbc32f6e63d3846650",
+    "DireccionesGenerales": {
+      "DGR": {
+        "name": "Direccion General de Rentas",
+        "address": "0xc351628eb244ec633d5f21fbd6621e1a683b1181"
+      },
+      "DGC": {
+        "name": "Direccion General de Catastro",
+        "address": "0x1fa02b2d6a771842690194cf62d91bdd92bfe28d"
+      },
+      "DGRPI": {
+        "name": "Direccion General de Registro de la Propiedad Inmobiliaria y de Mandatos",
+        "address": "0x0355b7b8cb128fa5692729ab3aaa199c1753f726"
+      },
+      "STAFF": {
+        "name": "Dependencias Staff ARCAT",
+        "address": "0xfbc22278a96299d91d41c453234d97b4f5eb9b2d"
+      }
+    },
+    "UnidadesOperativas": {
+      "DGR": {
+        "UO-REC": {
+          "name": "De Recaudacion",
+          "address": "0xcbeaf3bde82155f56486fb5a1072cb8baaf547cc"
+        },
+        "UO-FIS": {
+          "name": "De Fiscalizacion",
+          "address": "0x162a433068f51e18b7d13932f27e66a3f99e6890"
+        }
+      },
+      "DGC": {
+        "UO-SAN": {
+          "name": "De Saneamiento de Titulo",
+          "address": "0x04c89607413713ec9775e14b954286519d836fef"
+        },
+        "UO-CAR": {
+          "name": "De Cartografia",
+          "address": "0x2e2ed0cfd3ad2f1d34481277b3204d807ca2f8c2"
+        },
+        "UO-REG": {
+          "name": "De Registro Territorial",
+          "address": "0x51a1ceb83b83f1985a81c295d1ff28afef186e02"
+        }
+      },
+      "DGRPI": {
+        "UO-RIN": {
+          "name": "De Registracion Inmobiliaria",
+          "address": "0xf4b146fba71f41e0592668ffbf264f1d186b2ca8"
+        },
+        "UO-PUB": {
+          "name": "De Publicidad Inmobiliaria y Medidas Cautelares",
+          "address": "0xbec49fa140acaa83533fb00a2bb19bddd0290f25"
+        }
+      },
+      "STAFF": {
+        "UO-ADM": {
+          "name": "De Administracion",
+          "address": "0xc9a43158891282a2b1475592d5719c001986aaec"
+        },
+        "UO-RHH": {
+          "name": "De Capital Humano",
+          "address": "0x4c2f7092c2ae51d986befee378e50bd4db99c901"
+        },
+        "UO-TEC": {
+          "name": "De Tecnologias y Sistemas",
+          "address": "0x4631bcabd6df18d94796344963cb60d44a4136b6"
+        },
+        "UO-JUR": {
+          "name": "De Asuntos Juridicos",
+          "address": "0xf953b3a269d80e3eb0f2947630da976b896a8c5b"
+        },
+        "UO-GRE": {
+          "name": "De Gestion y Recaudacion de Recursos Especificos",
+          "address": "0x720472c8ce72c2a2d711333e064abd3e6bbeadd3"
+        },
+        "UO-AUD": {
+          "name": "Auditoria Interna",
+          "address": "0x18e317a7d70d8fbf8e6e893616b52390ebbdb629"
+        },
+        "UO-SEC": {
+          "name": "Secretaria General",
+          "address": "0xd5ac451b0c50b9476107823af206ed814a2e2580"
+        }
+      }
+    }
+  }
+}
