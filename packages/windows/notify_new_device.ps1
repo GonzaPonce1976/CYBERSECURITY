@@ -58,7 +58,7 @@ $body = @{
 } | ConvertTo-Json -Compress
 
 # Enviar alerta al Gateway Central
-$url = "http://$GatewayIp:8080/api/alerts/webhook"
+$url = "http://${GatewayIp}:8080/api/alerts/webhook"
 try {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
     $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "application/json; charset=utf-8" -Body $bytes -TimeoutSec 10
