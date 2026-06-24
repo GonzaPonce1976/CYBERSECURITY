@@ -695,8 +695,8 @@ async function refreshServicesView() {
     $('svc-gw-version').textContent = h.version ?? '—';
     $('svc-wazuh-cfg').textContent  = apis.wazuh ? '✅ Sí' : '⚠️ No';
     setBadge('svc-wazuh-badge', apis.wazuh, apis.wazuh ? 'Configurado' : 'Sin config');
-    $('svc-shodan-cfg').textContent  = apis.shodan ? '✅ Sí' : '⚠️ No';
-    setBadge('svc-shodan-badge', apis.shodan, apis.shodan ? 'Configurado' : 'Sin config');
+    $('svc-shodan-cfg').textContent  = apis.shodan ? '✅ API Key activa' : '⚙️ Modo simulado';
+    setBadge('svc-shodan-badge', true, apis.shodan ? 'Configurado' : 'Simulado');
   } catch {
     setBadge('svc-gateway-badge', false);
     ['svc-gw-uptime','svc-gw-alerts','svc-gw-ips','svc-gw-apis','svc-gw-version'].forEach(id => { const el=$(id); if(el) el.textContent='—'; });
@@ -1499,6 +1499,27 @@ async function registerDeviceMetaMask() {
 
     // 3. Parsear y validar contra blockchain cuáles están realmente pendientes
     const pendingDevices = [];
+    const { Contract } = await import('ethers');
+
+    // Instanciar contrato de la UO actual para consultar on-chain
+    const uoContract = new Contract(uoAddress, [
+      "function getTokenByHostname(string hostname) external view returns (uint256, bool)"
+    ], signer);
+
+    // Instanciar contrato de la Registry global para consultar on-chain
+    let registryContract = null;
+    try {
+      const overview = await api.getArcatOverview();
+      const registryAddr = overview.arcat.arcat_registry;
+      if (registryAddr && registryAddr !== "0x0000000000000000000000000000000000000000") {
+        registryContract = new Contract(registryAddr, [
+          "function lookupByHostname(string hostname) external view returns (address, uint256, bool)"
+        ], signer);
+      }
+    } catch (e) {
+      console.warn("No se pudo instanciar ArcatRegistry para chequeo:", e);
+    }
+
     for (const alert of pendingAlerts) {
       const desc = alert.description;
       const nameMatch = desc.match(/Nombre:\s*([^|]+)/);
@@ -1512,15 +1533,41 @@ async function registerDeviceMetaMask() {
         const name = nameMatch ? nameMatch[1].trim() : `Dispositivo ${hostname}`;
         const type = typeMatch ? parseInt(typeMatch[1]) : 1;
 
-        // Comprobar si ya está registrado en la blockchain (evitar duplicados)
+        let isAlreadyRegistered = false;
+
+        // Check 1: Directamente en el contrato de la UO actual
         try {
-          const check = await api.getArcatDevice(hostname);
-          if (check.status !== 'ok') {
-            if (!pendingDevices.some(d => d.hostname === hostname)) {
-              pendingDevices.push({ name, hostname, uuid, type });
-            }
+          const [_, foundInUO] = await uoContract.getTokenByHostname(hostname);
+          if (foundInUO) {
+            isAlreadyRegistered = true;
           }
-        } catch {
+        } catch (err) {
+          console.error("Error verificando en UO:", err);
+        }
+
+        // Check 2: Directamente en el contrato Registry global
+        if (!isAlreadyRegistered && registryContract) {
+          try {
+            const [_, __, foundInRegistry] = await registryContract.lookupByHostname(hostname);
+            if (foundInRegistry) {
+              isAlreadyRegistered = true;
+            }
+          } catch (err) {
+            console.error("Error verificando en Registry:", err);
+          }
+        }
+
+        // Check 3: Fallback al Gateway API
+        if (!isAlreadyRegistered) {
+          try {
+            const check = await api.getArcatDevice(hostname);
+            if (check.status === 'ok') {
+              isAlreadyRegistered = true;
+            }
+          } catch {}
+        }
+
+        if (!isAlreadyRegistered) {
           if (!pendingDevices.some(d => d.hostname === hostname)) {
             pendingDevices.push({ name, hostname, uuid, type });
           }
