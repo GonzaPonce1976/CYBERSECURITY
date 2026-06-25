@@ -56,7 +56,7 @@ if (Test-Path $deployArcatJson) {
     Write-Host "[AVISO] No se encontro deployments\localhost_arcat.json" -ForegroundColor Yellow
 }
 
-# ── Sincronizar ABUSECH_AUTH_KEY si esta en root .env ──────────────
+# ── Sincronizar variables de config adicionales si estan en root .env ──
 if (Test-Path $rootEnv) {
     $rootContent = Get-Content $rootEnv -Raw -ErrorAction SilentlyContinue
     if ($rootContent -match "(?m)^ABUSECH_AUTH_KEY=(.+)") {
@@ -64,6 +64,12 @@ if (Test-Path $rootEnv) {
         if ($abusechKey -and $abusechKey -ne "your_abusech_key_here") {
             $vars["ABUSECH_AUTH_KEY"] = $abusechKey
         }
+    }
+    if ($rootContent -match "(?m)^ETH_RPC_URL=(.+)") {
+        $vars["ETH_RPC_URL"] = $Matches[1].Trim()
+    }
+    if ($rootContent -match "(?m)^DEPLOYER_PRIVATE_KEY=(.+)") {
+        $vars["DEPLOYER_PRIVATE_KEY"] = $Matches[1].Trim()
     }
 }
 
@@ -79,7 +85,7 @@ function Update-EnvFile {
         New-Item -ItemType File -Path $Path -Force | Out-Null
     }
 
-    $content = Get-Content $Path -Raw
+    $content = [System.IO.File]::ReadAllText($Path)
 
     foreach ($key in $Variables.Keys) {
         $val = $Variables[$key]

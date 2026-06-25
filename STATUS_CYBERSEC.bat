@@ -2,6 +2,25 @@
 chcp 65001 >nul
 title 📊 CyberSecurity DApp — Estado de Servicios
 color 0B
+setlocal EnableDelayedExpansion
+
+REM Cargar y parsear ETH_RPC_URL desde .env
+set "ETH_RPC_URL=http://127.0.0.1:8545"
+if exist ".env" (
+    for /f "usebackq tokens=1,2 delims==" %%i in (".env") do (
+        if "%%i"=="ETH_RPC_URL" set "ETH_RPC_URL=%%j"
+    )
+)
+set "RPC_TEMP=!ETH_RPC_URL!"
+set "RPC_TEMP=!RPC_TEMP: =!"
+set "RPC_TEMP=!RPC_TEMP:http://=!"
+set "RPC_TEMP=!RPC_TEMP:https://=!"
+for /f "tokens=1,2 delims=:" %%a in ("!RPC_TEMP!") do (
+    set "RPC_HOST=%%a"
+    set "RPC_PORT=%%b"
+)
+if "!RPC_HOST!"=="" set "RPC_HOST=127.0.0.1"
+if "!RPC_PORT!"=="" set "RPC_PORT=8545"
 
 echo.
 echo  ╔══════════════════════════════════════════════════════════════╗
@@ -38,13 +57,13 @@ if %errorlevel%==0 (
 echo.
 
 echo  ┌─────────────────────────────────────────────────────────────┐
-echo  │  Puerto :8545 — Hardhat Blockchain Node                      │
+echo  │  Puerto :!RPC_PORT! — Hardhat/Anvil Blockchain Node                │
 echo  └─────────────────────────────────────────────────────────────┘
-netstat -ano | findstr ":8545 " | findstr "LISTENING" >nul 2>&1
+netstat -ano | findstr ":!RPC_PORT! " | findstr "LISTENING" >nul 2>&1
 if %errorlevel%==0 (
-    echo  Estado: 🟢 ONLINE — Hardhat/Anvil escuchando en puerto 8545
+    echo  Estado: 🟢 ONLINE — Hardhat/Anvil escuchando en puerto !RPC_PORT!
 ) else (
-    echo  Estado: 🟡 OFFLINE — Hardhat no activo (opcional en desarrollo)
+    echo  Estado: 🟡 OFFLINE — Hardhat/Anvil no activo (opcional en desarrollo)
 )
 echo.
 

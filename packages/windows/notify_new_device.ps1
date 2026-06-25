@@ -26,11 +26,22 @@ try {
     } catch {}
 }
 
-# Obtener IP local principal
+# Obtener IP local principal de forma ultra compatible y exacta (usando socket o WMI)
 $ip = "127.0.0.1"
 try {
-    $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' } | Select-Object -First 1).IPAddress
-} catch {}
+    $socket = New-Object System.Net.Sockets.TcpClient
+    $socket.Connect($GatewayIp, 8080)
+    $ip = $socket.Client.LocalEndPoint.Address.IPAddressToString
+    $socket.Close()
+} catch {
+    try {
+        $ip = (Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -and $_.DefaultIPGateway }).IPAddress[0]
+    } catch {
+        try {
+            $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' } | Select-Object -First 1).IPAddress
+        } catch {}
+    }
+}
 
 # Determinar tipo de dispositivo según el sistema operativo
 $os = "Desconocido"
@@ -43,7 +54,7 @@ if ($os -like "*Server*") {
 }
 
 # Construir el mensaje formateado con las variables solicitadas
-$description = "NUEVO DISPOSITIVO DETECTADO. Se solicita incorporar este dispositivo en el Inventario de Dispositivos Tokenizados (SBT) de la Blockchain (solapa ARCAT Blockchain). Datos para acuñar: Nombre: Dispositivo $env:COMPUTERNAME | Hostname: $hostname | UUID: $uuid | Tipo: $dType (0=Server, 1=Workstation) | Estado: Activo | Threat Score: 0"
+$description = "NUEVO DISPOSITIVO DETECTADO. Se solicita incorporar este dispositivo en el Inventario de Dispositivos Tokenizados (SBT) de la Blockchain (solapa ARCAT Blockchain). Datos para acuñar: Nombre: $ip | Hostname: $hostname | UUID: $uuid | Tipo: $dType (0=Server, 1=Workstation) | Estado: Activo | Threat Score: 0"
 
 # Payload de la alerta
 $body = @{

@@ -8,7 +8,7 @@ let signer = null;
 let account = null;
 
 const TARGET_CHAIN = parseInt(import.meta.env.VITE_CHAIN_ID || '31337');
-const NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME || 'Hardhat Local';
+const NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME || 'Hardhat/Anvil Local';
 
 /**
  * Reconexión silenciosa al cargar la página.

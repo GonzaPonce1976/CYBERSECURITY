@@ -42,14 +42,20 @@ REM  Parsear argumentos de linea de comandos
 REM ----------------------------------------------------------------
 set "CLEAN_DB=0"
 set "FORCE_REBUILD=0"
+set "FORCE_HARDHAT=0"
+set "FORCE_ANVIL=0"
 
 for %%A in (%*) do (
     if /i "%%A"=="--clean-db" set "CLEAN_DB=1"
     if /i "%%A"=="--rebuild"  set "FORCE_REBUILD=1"
+    if /i "%%A"=="--hardhat"  set "FORCE_HARDHAT=1"
+    if /i "%%A"=="--anvil"    set "FORCE_ANVIL=1"
 )
 
 if "!CLEAN_DB!"=="1"      echo  [FLAG] --clean-db  activado: gateway_data.db sera reiniciada
 if "!FORCE_REBUILD!"=="1" echo  [FLAG] --rebuild   activado: gateway sera recompilado
+if "!FORCE_HARDHAT!"=="1" echo  [FLAG] --hardhat   activado: forzando uso de Hardhat Node
+if "!FORCE_ANVIL!"=="1"   echo  [FLAG] --anvil     activado: forzando uso de Anvil Node
 echo.
 
 REM ----------------------------------------------------------------
@@ -132,7 +138,7 @@ set /p DOCKER_STATUS=<"%TEMP%\docker_check.txt"
 if "%DOCKER_STATUS%"=="" (
     echo  [AVISO] Contenedores de Wazuh inactivos. Iniciando con docker-compose...
     call npm run docker:up
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo  [ERROR] Fallo al iniciar los contenedores de Docker.
         pause & exit /b 1
     )
@@ -177,30 +183,74 @@ echo.
 
 REM =================================================================
 echo  +-----------------------------------------------------------------+
-echo  ^|  PASO 4: Iniciando Nodo Blockchain Hardhat (:8545)              ^|
+echo  ^|  PASO 4: Iniciando Nodo Blockchain (Anvil / Hardhat)           ^|
 echo  +-----------------------------------------------------------------+
 echo.
 
-netstat -ano | findstr ":8545 " | findstr "LISTENING" >nul 2>&1
+REM Cargar y parsear ETH_RPC_URL desde .env
+set "ETH_RPC_URL=http://127.0.0.1:8545"
+if exist "%PROJECT_DIR%\.env" (
+    for /f "usebackq tokens=1,2 delims==" %%i in ("%PROJECT_DIR%\.env") do (
+        if "%%i"=="ETH_RPC_URL" set "ETH_RPC_URL=%%j"
+    )
+)
+set "RPC_TEMP=!ETH_RPC_URL!"
+set "RPC_TEMP=!RPC_TEMP: =!"
+set "RPC_TEMP=!RPC_TEMP:http://=!"
+set "RPC_TEMP=!RPC_TEMP:https://=!"
+for /f "tokens=1,2 delims=:" %%a in ("!RPC_TEMP!") do (
+    set "RPC_HOST=%%a"
+    set "RPC_PORT=%%b"
+)
+if "!RPC_HOST!"=="" set "RPC_HOST=127.0.0.1"
+if "!RPC_PORT!"=="" set "RPC_PORT=8545"
+
+netstat -ano | findstr ":!RPC_PORT! " | findstr "LISTENING" >nul 2>&1
 if %errorlevel%==0 (
-    echo  [OK] Hardhat ya estaba corriendo en :8545 - omitiendo inicio.
-    goto :SKIP_HARDHAT
+    echo  [OK] Blockchain ya estaba corriendo en :!RPC_PORT! - omitiendo inicio.
+    goto :SKIP_BLOCKCHAIN
 )
 
-echo  Abriendo ventana de Hardhat blockchain...
-start "Hardhat Blockchain :8545" cmd /k "title Hardhat Blockchain :8545 && cd /d "%PROJECT_DIR%" && npm run dev:contracts"
+set "USE_ANVIL=0"
+if "!FORCE_HARDHAT!"=="1" (
+    echo  Forzando el uso de Hardhat Node por argumento...
+) else (
+    anvil --version >nul 2>&1
+    if !errorlevel!==0 (
+        set "USE_ANVIL=1"
+    ) else (
+        if "!FORCE_ANVIL!"=="1" (
+            echo  [ERROR] Se solicito --anvil pero anvil.exe no esta en el PATH.
+            pause & exit /b 1
+        )
+        echo  [INFO] Anvil no detectado en el PATH. Se usara Hardhat Node.
+    )
+)
+
+if "!USE_ANVIL!"=="1" (
+    echo  Abriendo ventana de Anvil blockchain...
+    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id 31337"
+) else (
+    echo  Abriendo ventana de Hardhat blockchain...
+    start "Hardhat Blockchain :!RPC_PORT!" cmd /k "title Hardhat Blockchain :!RPC_PORT! && cd /d "%PROJECT_DIR%" && npx hardhat node --hostname !RPC_HOST! --port !RPC_PORT! --config hardhat.config.cjs"
+)
 
 echo  Esperando 10 segundos para que el nodo este listo...
 ping 127.0.0.1 -n 11 >nul
 
-netstat -ano | findstr ":8545 " | findstr "LISTENING" >nul 2>&1
+netstat -ano | findstr ":!RPC_PORT! " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [ERROR] Hardhat no pudo iniciar. Revisa la ventana de Hardhat.
+    echo  [ERROR] El nodo blockchain no pudo iniciar.
     pause & exit /b 1
 )
-echo  [OK] Hardhat blockchain activo en puerto 8545.
 
-:SKIP_HARDHAT
+if "!USE_ANVIL!"=="1" (
+    echo  [OK] Anvil blockchain activo en puerto !RPC_PORT! - Chain ID 31337.
+) else (
+    echo  [OK] Hardhat blockchain activo en puerto !RPC_PORT! - Chain ID 31337.
+)
+
+:SKIP_BLOCKCHAIN
 
 REM =================================================================
 echo.
@@ -282,6 +332,17 @@ echo       ArcatRegistry  : !ADDR_ARCAT_REGISTRY!
 REM =================================================================
 echo.
 echo  +-----------------------------------------------------------------+
+echo  ^|  PASO 7.5: Verificación Sistemática del Nodo Blockchain         ^|
+echo  +-----------------------------------------------------------------+
+echo.
+node scripts/verify-anvil.js
+if !errorlevel! neq 0 (
+    echo  [AVISO] La verificación sistemática de blockchain falló o advirtió un problema.
+)
+
+REM =================================================================
+echo.
+echo  +-----------------------------------------------------------------+
 echo  ^|  PASO 8: Compilando Gateway Rust (si es necesario)   [v0.3.0]  ^|
 echo  +-----------------------------------------------------------------+
 echo.
@@ -295,9 +356,9 @@ if "!FORCE_REBUILD!"=="1" (
     echo.
 
     if exist "%BUILD_BAT%" (
-        echo  Usando build.bat (configuracion MSVC probada)...
+        echo  Usando build.bat - configuracion MSVC probada...
         call "%BUILD_BAT%"
-        if %errorlevel% neq 0 (
+        if !errorlevel! neq 0 (
             echo  [ERROR] Fallo la compilacion del Gateway via build.bat.
             echo         Intenta manualmente: cd rust-gateway ^&^& cargo build --release
             pause & exit /b 1
@@ -306,7 +367,7 @@ if "!FORCE_REBUILD!"=="1" (
         echo  [AVISO] build.bat no encontrado. Intentando cargo build directo...
         cd /d "%GATEWAY_DIR%"
         cargo build --release
-        if %errorlevel% neq 0 (
+        if !errorlevel! neq 0 (
             echo  [ERROR] Fallo la compilacion. Instala MSVC Build Tools.
             pause & exit /b 1
         )
@@ -394,9 +455,9 @@ set "SHODAN_MODE=Modo simulado (sin SHODAN_API_KEY)"
     set /a GW_ATTEMPTS+=1
     if !GW_ATTEMPTS! gtr 30 goto :GW_TIMEOUT
     ping 127.0.0.1 -n 3 >nul
-    curl.exe -s --max-time 2 -o nul -w "%%{http_code}" http://localhost:8080/api/health > "%TEMP%\gw_check.txt" 2>nul
+    curl.exe -s --max-time 2 -o "%TEMP%\gw_body.txt" -w "%%{http_code}" http://localhost:8080/api/health > "%TEMP%\gw_check.txt" 2>nul
     set "GW_CODE="
-    set /p GW_CODE<"%TEMP%\gw_check.txt"
+    set /p GW_CODE=<"%TEMP%\gw_check.txt"
     if "!GW_CODE!"=="200" (
         set "GW_READY=1"
         goto :GW_READY
@@ -419,15 +480,15 @@ REM ---- Verificar modo Shodan via health check ----------------------
 curl.exe -s --max-time 3 http://localhost:8080/api/health > "%TEMP%\gw_health.txt" 2>nul
 findstr /c:"\"shodan\":true" "%TEMP%\gw_health.txt" >nul 2>&1
 if %errorlevel%==0 (
-    set "SHODAN_MODE=API Key configurada (datos reales)"
+    set "SHODAN_MODE=API Key configurada - datos reales"
 ) else (
-    set "SHODAN_MODE=Modo simulado (agregar SHODAN_API_KEY en .env)"
+    set "SHODAN_MODE=Modo simulado - agregar SHODAN_API_KEY en .env"
 )
 
 REM ---- Verificar endpoint /api/ip/exposures (fix v0.3.0) ----------
-curl.exe -s --max-time 3 -o nul -w "%%{http_code}" http://localhost:8080/api/ip/exposures > "%TEMP%\shodan_check.txt" 2>nul
+curl.exe -s --max-time 3 -o "%TEMP%\shodan_body.txt" -w "%%{http_code}" http://localhost:8080/api/ip/exposures > "%TEMP%\shodan_check.txt" 2>nul
 set "SHODAN_CODE="
-set /p SHODAN_CODE<"%TEMP%\shodan_check.txt"
+set /p SHODAN_CODE=<"%TEMP%\shodan_check.txt"
 if "!SHODAN_CODE!"=="200" (
     echo  [OK] Endpoint /api/ip/exposures: HTTP 200 - perimetral Shodan activo
 ) else (
@@ -456,7 +517,7 @@ findstr /c:"\"ok\"" "%TEMP%\bc_init.txt" >nul 2>&1
 if %errorlevel%==0 (
     echo  [OK] Evento SYSTEM_START registrado on-chain correctamente.
 ) else (
-    echo  [AVISO] No se pudo registrar on-chain (blockchain puede estar sincronizando).
+    echo  [AVISO] No se pudo registrar on-chain - la blockchain puede estar sincronizando.
 )
 
 REM =================================================================
@@ -475,10 +536,10 @@ if defined ADDR_SECURITY (
 ) else (
     echo      Ver: deployments\localhost.json
 )
-echo      Red            : Chain ID 31337  Hardhat local
+echo      Red            : Chain ID 31337  Anvil/Hardhat local
 echo.
 echo    SERVICIOS
-echo      Hardhat Node   : http://localhost:8545
+echo      Blockchain Node: !ETH_RPC_URL!
 echo      Rust Gateway   : http://localhost:8080  [binary-first v0.3.0]
 echo      Health Check   : http://localhost:8080/api/health
 echo      Shodan Perim.  : http://localhost:8080/api/ip/exposures

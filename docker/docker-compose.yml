@@ -103,6 +103,8 @@ services:
         condition: service_healthy
     ports:
       - "8081:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - ../.env
     environment:
@@ -110,6 +112,7 @@ services:
       - GATEWAY_PORT=8080
       - WAZUH_API_URL=https://wazuh-manager:55000
       - DATABASE_URL=/tmp/gateway.db
+      - ETH_RPC_URL=http://host.docker.internal:8545
     networks:
       - cybersec-net
     healthcheck:

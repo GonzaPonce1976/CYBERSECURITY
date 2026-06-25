@@ -2,6 +2,25 @@
 chcp 65001 >nul
 title CyberSecurity DApp -- Detener Stack v0.3.0
 color 0C
+setlocal EnableDelayedExpansion
+
+REM Cargar y parsear ETH_RPC_URL desde .env
+set "ETH_RPC_URL=http://127.0.0.1:8545"
+if exist ".env" (
+    for /f "usebackq tokens=1,2 delims==" %%i in (".env") do (
+        if "%%i"=="ETH_RPC_URL" set "ETH_RPC_URL=%%j"
+    )
+)
+set "RPC_TEMP=!ETH_RPC_URL!"
+set "RPC_TEMP=!RPC_TEMP: =!"
+set "RPC_TEMP=!RPC_TEMP:http://=!"
+set "RPC_TEMP=!RPC_TEMP:https://=!"
+for /f "tokens=1,2 delims=:" %%a in ("!RPC_TEMP!") do (
+    set "RPC_HOST=%%a"
+    set "RPC_PORT=%%b"
+)
+if "!RPC_HOST!"=="" set "RPC_HOST=127.0.0.1"
+if "!RPC_PORT!"=="" set "RPC_PORT=8545"
 
 echo.
 echo  +==============================================================+
@@ -28,14 +47,15 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":5173 " ^| findstr "LISTENIN
     taskkill /F /PID %%p >nul 2>&1 && echo  [OK] Proceso PID %%p en :5173 detenido
 )
 
-echo  Buscando y deteniendo proceso en puerto 8545 (Hardhat Node)...
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8545 " ^| findstr "LISTENING"') do (
-    taskkill /F /PID %%p >nul 2>&1 && echo  [OK] Proceso PID %%p en :8545 detenido
+echo  Buscando y deteniendo proceso en puerto !RPC_PORT! (Hardhat/Anvil Node)...
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":!RPC_PORT! " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%p >nul 2>&1 && echo  [OK] Proceso PID %%p en :!RPC_PORT! detenido
 )
 
-REM ── Detener procesos Node.js residuales ────────────────────────────
+REM ── Detener procesos Node.js y Anvil residuales ────────────────────
 echo.
-echo  Deteniendo procesos Node.js residuales...
+echo  Deteniendo procesos Node.js y Anvil residuales...
+taskkill /F /IM anvil.exe >nul 2>&1 && echo  [OK] Procesos anvil.exe detenidos || echo  [INFO] No habia procesos anvil.exe activos
 taskkill /F /IM node.exe >nul 2>&1 && echo  [OK] Procesos node.exe detenidos || echo  [INFO] No habia procesos node.exe activos
 
 echo.

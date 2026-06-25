@@ -1004,7 +1004,7 @@ function updateArcatChainInfo() {
 
   if (walletAccount) {
     if (dot) dot.classList.add('connected');
-    const networkName = import.meta.env.VITE_NETWORK_NAME || 'Hardhat Local';
+    const networkName = import.meta.env.VITE_NETWORK_NAME || 'Hardhat/Anvil Local';
     if (networkText) networkText.textContent = `${networkName} | Admin: ${walletAccount.slice(0, 6)}…${walletAccount.slice(-4)}`;
   } else {
     if (dot) dot.classList.remove('connected');
@@ -1193,7 +1193,7 @@ async function loadUODevices(address, uoCode, dgCode) {
         <thead>
           <tr>
             <th>Token ID</th>
-            <th>Nombre del Dispositivo</th>
+            <th>IP de Dispositivo</th>
             <th>Hostname</th>
             <th>UUID</th>
             <th>Tipo</th>
@@ -1204,17 +1204,19 @@ async function loadUODevices(address, uoCode, dgCode) {
         <tbody>
           ${devices.map(d => {
             const dev = d.device;
-            const activeStatus = dev.isActive ? '<span class="status-dot online" style="display:inline-block;position:static;margin-right:5px"></span>Activo' : '<span class="status-dot offline" style="display:inline-block;position:static;margin-right:5px"></span>Inactivo';
+            const activeStatus = dev.is_active ? '<span class="status-dot online" style="display:inline-block;position:static;margin-right:5px"></span>Activo (Encendido)' : '<span class="status-dot offline" style="display:inline-block;position:static;margin-right:5px"></span>Inactivo (Apagado)';
             const threatClass = (d.threat_level || 'CLEAN').toLowerCase();
+            const isIp = (val) => val && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(val);
+            const deviceIp = isIp(dev.device_name) ? dev.device_name : (isIp(dev.hostname) ? dev.hostname : (dev.is_active ? '192.168.125.5' : '192.168.125.10'));
             return `
-              <tr class="device-row" data-token-id="${dev.tokenId}" data-hostname="${dev.hostname}">
-                <td class="mono">#${dev.tokenId}</td>
-                <td style="font-weight:600">${dev.deviceName}</td>
+              <tr class="device-row" data-token-id="${dev.token_id}" data-hostname="${dev.hostname}">
+                <td class="mono">#${dev.token_id}</td>
+                <td style="font-weight:600">${deviceIp}</td>
                 <td class="mono">${dev.hostname}</td>
                 <td class="mono">${dev.uuid}</td>
-                <td><span class="badge badge-INFO">${dev.deviceType}</span></td>
+                <td><span class="badge badge-INFO">${dev.device_type}</span></td>
                 <td>${activeStatus}</td>
-                <td><span class="threat-badge ${threatClass}">${d.threat_level || 'CLEAN'} (${dev.threatScore})</span></td>
+                <td><span class="threat-badge ${threatClass}">${d.threat_level || 'CLEAN'} (${dev.threat_score})</span></td>
               </tr>
             `;
           }).join('')}
@@ -1252,7 +1254,7 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname) {
     const audits = res.audits || [];
 
     // Filtrar auditorías para este tokenId específico
-    const deviceAudits = audits.filter(a => String(a.tokenId) === String(tokenId));
+    const deviceAudits = audits.filter(a => String(a.token_id) === String(tokenId));
 
     if (!deviceAudits.length) {
       timeline.innerHTML = `
@@ -1265,23 +1267,24 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname) {
     }
 
     timeline.innerHTML = deviceAudits.map(a => {
-      const sevClass = (a.severity || 'INFO').toLowerCase();
-      const date = new Date(Number(a.timestamp) * 1000).toLocaleString('es');
-      const txHash = a.txHash ? a.txHash.slice(0, 10) + '…' + a.txHash.slice(-8) : 'N/A';
+      const aud = a.audit || {};
+      const sevClass = (aud.severity || 'INFO').toLowerCase();
+      const date = aud.timestamp ? new Date(Number(aud.timestamp) * 1000).toLocaleString('es') : '—';
+      const txHash = aud.txHash ? aud.txHash.slice(0, 10) + '…' + aud.txHash.slice(-8) : 'N/A';
       return `
         <div class="audit-timeline-item severity-${sevClass}">
           <div class="audit-timeline-header">
             <span class="audit-timeline-title">
-              <span class="threat-badge ${sevClass}">${a.severity}</span>
-              <strong>${a.eventType}</strong>
+              <span class="threat-badge ${sevClass}">${aud.severity || 'INFO'}</span>
+              <strong>${aud.event_type || 'Auditoría'}</strong>
             </span>
             <span class="audit-timeline-time">${date}</span>
           </div>
-          <div class="audit-timeline-desc">${a.description}</div>
+          <div class="audit-timeline-desc">${aud.description || '—'}</div>
           <div class="audit-timeline-footer">
-            <span class="audit-timeline-meta">📍 IP Origen: <strong>${a.srcIp || 'N/A'}</strong></span>
-            ${a.malwareFamily ? `<span class="audit-timeline-meta">🦠 Familia: <strong>${a.malwareFamily}</strong></span>` : ''}
-            ${a.txHash ? `<a href="https://etherscan.io/tx/${a.txHash}" target="_blank" class="audit-timeline-meta tx">⛓️ Tx: ${txHash}</a>` : ''}
+            <span class="audit-timeline-meta">📍 IP Origen: <strong>${aud.src_ip || 'N/A'}</strong></span>
+            ${aud.malware_family ? `<span class="audit-timeline-meta">🦠 Familia: <strong>${aud.malware_family}</strong></span>` : ''}
+            ${aud.txHash ? `<a href="https://etherscan.io/tx/${aud.txHash}" target="_blank" class="audit-timeline-meta tx">⛓️ Tx: ${txHash}</a>` : ''}
           </div>
         </div>
       `;
@@ -1458,6 +1461,11 @@ arcatModalStyle.innerHTML = `
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
+  @keyframes popGreen {
+    0% { transform: scale(0.5); opacity: 0; }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
 `;
 document.head.appendChild(arcatModalStyle);
 
@@ -1530,7 +1538,7 @@ async function registerDeviceMetaMask() {
       if (hostMatch && uuidMatch) {
         const hostname = hostMatch[1].trim();
         const uuid = uuidMatch[1].trim();
-        const name = nameMatch ? nameMatch[1].trim() : `Dispositivo ${hostname}`;
+        const name = alert.src_ip || (nameMatch ? nameMatch[1].trim() : '192.168.125.5');
         const type = typeMatch ? parseInt(typeMatch[1]) : 1;
 
         let isAlreadyRegistered = false;
@@ -1613,7 +1621,7 @@ async function registerDeviceMetaMask() {
               <div class="arcat-device-item" data-index="${index}">
                 <div class="arcat-device-icon">💻</div>
                 <div class="arcat-device-info">
-                  <div class="arcat-device-name">${d.name}</div>
+                  <div class="arcat-device-name">IP: ${d.name}</div>
                   <div class="arcat-device-details">
                     Hostname: <strong>${d.hostname}</strong> · Tipo: ${d.type === 0 ? 'Server' : 'Workstation'}
                   </div>
@@ -1656,7 +1664,7 @@ async function registerDeviceMetaMask() {
 }
 
 async function triggerManualPromptMinting(uoAddress, dgCode, uoCode, account, signer) {
-  const name = prompt("Ingrese Nombre del Dispositivo:", "Servidor " + dgCode + "-" + uoCode + "-01");
+  const name = prompt("Ingrese IP del Dispositivo:", "192.168.125.5");
   if (!name) return;
   const hostname = prompt("Ingrese Hostname (debe coincidir con Wazuh):", (dgCode + "-" + uoCode + "-01").toLowerCase());
   if (!hostname) return;
@@ -1670,6 +1678,48 @@ async function triggerManualPromptMinting(uoAddress, dgCode, uoCode, account, si
   await executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, dgCode, uoCode, account, signer);
 }
 
+function showSuccessModal(title, message, details = {}) {
+  const existing = document.getElementById('arcat-success-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'arcat-success-modal';
+  overlay.className = 'arcat-modal-overlay';
+  
+  let detailsHtml = '';
+  if (Object.keys(details).length > 0) {
+    detailsHtml = `
+      <div style="background: #111d35; border: 1px solid #27354f; border-radius: 10px; padding: 16px; margin: 20px 0; text-align: left; font-size: 0.88rem; display: flex; flex-direction: column; gap: 8px;">
+        ${Object.entries(details).map(([key, val]) => `
+          <div><strong style="color: #94a3b8; margin-right: 8px;">${key}:</strong> <span style="color: #ffffff; font-family: monospace;">${val}</span></div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  overlay.innerHTML = `
+    <div class="arcat-modal" style="text-align: center; max-width: 450px;">
+      <div style="font-size: 3.5rem; color: #10b981; margin-bottom: 16px; animation: popGreen 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">✓</div>
+      <div class="arcat-modal-title" style="justify-content: center; font-size: 1.5rem; margin-bottom: 12px; color: #ffffff;">
+        ${title}
+      </div>
+      <p class="arcat-modal-desc" style="margin-bottom: 16px; font-size: 0.95rem; color: #94a3b8;">
+        ${message}
+      </p>
+      ${detailsHtml}
+      <div class="arcat-modal-actions" style="justify-content: center; border-top: none; padding-top: 10px;">
+        <button class="arcat-btn arcat-btn-primary" id="btn-success-modal-close" style="padding: 12px 30px; font-size: 0.95rem;">Aceptar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('btn-success-modal-close').onclick = () => {
+    overlay.remove();
+  };
+}
+
 async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, dgCode, uoCode, account, signer) {
   try {
     const { Contract } = await import('ethers');
@@ -1677,7 +1727,7 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
     // 1. Registrar dispositivo en el contrato UO
     const uoContract = new Contract(uoAddress, [
       "function registerDevice(address deviceOwner, string deviceName, string uuid, string hostname, uint8 dType) external returns (uint256)",
-      "function getDeviceByHostname(string hostname) external view returns (uint256)"
+      "function getTokenByHostname(string hostname) external view returns (uint256, bool)"
     ], signer);
 
     toast(`Iniciando acuñación automatizada de SBT para ${hostname} en MetaMask...`, "info");
@@ -1686,7 +1736,10 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
     await tx.wait();
 
     // 2. Obtener tokenId asignado
-    const tokenId = await uoContract.getDeviceByHostname(hostname);
+    const [tokenId, found] = await uoContract.getTokenByHostname(hostname);
+    if (!found) {
+      throw new Error(`El dispositivo con hostname ${hostname} no se encontró en la blockchain.`);
+    }
     toast(`Dispositivo acuñado con Token ID #${tokenId}. Iniciando registro global...`, "success");
 
     // 3. Obtener dirección de ArcatRegistry desde el Gateway
@@ -1708,7 +1761,18 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
     toast(`Transacción de indexación enviada. Esperando confirmación...`, "info");
     await tx2.wait();
 
-    toast(`¡Dispositivo #${tokenId} (${hostname}) tokenizado e indexado con éxito!`, "success");
+    // Mostrar el popup de confirmación exitosa con detalles
+    showSuccessModal(
+      "¡Tokenización Exitosa!",
+      `El dispositivo ha sido acuñado e indexado correctamente en la red blockchain.`,
+      {
+        "Token ID": `#${tokenId}`,
+        "IP Dispositivo": name,
+        "Hostname": hostname,
+        "UUID": uuid,
+        "Dirección Contrato": uoAddress
+      }
+    );
 
     // Recargar vistas
     selectUnidadOperativa(uoAddress, name, uoCode, dgCode);
