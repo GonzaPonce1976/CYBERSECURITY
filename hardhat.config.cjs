@@ -15,7 +15,8 @@ const DEPLOYER_PRIVATE_KEY =
 const SEPOLIA_RPC_URL =
   process.env.SEPOLIA_RPC_URL || "https://eth-sepolia.g.alchemy.com/v2/demo";
 
-/** @type import('hardhat/config').HardhatUserConfig */
+const CHAIN_ID = parseInt(process.env.VITE_CHAIN_ID || "31337", 10);
+
 module.exports = {
   solidity: {
     version: "0.8.28",
@@ -29,10 +30,10 @@ module.exports = {
     localhost: {
       type: "http",
       url: "http://127.0.0.1:8545",
-      chainId: 31337,
+      chainId: CHAIN_ID,
     },
     hardhat: {
-      chainId: 31337,
+      chainId: CHAIN_ID,
     },
     sepolia: {
       type: "http",

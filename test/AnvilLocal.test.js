@@ -2,10 +2,11 @@ import { expect } from "chai";
 import hre from "hardhat";
 
 describe("Anvil / Hardhat Local Network Verifications", function () {
-  it("debe conectar exitosamente y el Chain ID debe ser 31337", async function () {
+  it("debe conectar exitosamente y el Chain ID debe coincidir con el configurado", async function () {
     const publicClient = await hre.viem.getPublicClient();
     const chainId = await publicClient.getChainId();
-    expect(chainId).to.equal(31337);
+    const expectedChainId = Number(hre.network.config.chainId || 1);
+    expect(chainId).to.equal(expectedChainId);
   });
 
   it("debe poder obtener el número de bloque actual", async function () {

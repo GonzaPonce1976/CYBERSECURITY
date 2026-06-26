@@ -711,7 +711,12 @@ async function refreshServicesView() {
   // ── Blockchain (Anvil) ──
   const chain = await checkBlockchain();
   setBadge('svc-blockchain-badge', chain.online, chain.online ? 'Mining' : 'Offline');
-  $('svc-chain-network').textContent = chain.online ? 'Hardhat / Anvil — Chain 31337' : '—';
+  const targetChain = import.meta.env.VITE_CHAIN_ID || '1';
+  $('svc-chain-network').textContent = chain.online ? `Hardhat / Anvil — Chain ${targetChain}` : '—';
+  const subtitleEl = $('svc-chain-rpc-subtitle');
+  if (subtitleEl) {
+    subtitleEl.textContent = `http://localhost:8545 · Chain ${targetChain}`;
+  }
   $('svc-chain-block').textContent   = chain.block != null ? `#${chain.block}` : '—';
   const contractAddr = chain.contract || import.meta.env.VITE_CONTRACT_SECURITY_AUDIT;
   $('svc-chain-contract').textContent = contractAddr
@@ -1896,6 +1901,11 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
     toast(`Transacción de indexación enviada. Esperando confirmación...`, "info");
     await tx2.wait();
 
+    // Simular costo de gas y resta en USD
+    const ethPrice = 3500; // Valor simulado de ETH a USD
+    const gasEth = (0.00035 + Math.random() * 0.00015).toFixed(6);
+    const gasUsd = (parseFloat(gasEth) * ethPrice).toFixed(2);
+
     // Mostrar el popup de confirmación exitosa con detalles
     showSuccessModal(
       "¡Tokenización Exitosa!",
@@ -1905,6 +1915,8 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
         "IP Dispositivo": name,
         "Hostname": hostname,
         "UUID": uuid,
+        "Costo de Gas": `${gasEth} ETH (~$${gasUsd} USD)`,
+        "Deducción (USD)": `-$${gasUsd} USD`,
         "Dirección Contrato": uoAddress
       }
     );

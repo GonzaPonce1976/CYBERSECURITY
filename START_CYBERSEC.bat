@@ -187,11 +187,13 @@ echo  ^|  PASO 4: Iniciando Nodo Blockchain (Anvil / Hardhat)           ^|
 echo  +-----------------------------------------------------------------+
 echo.
 
-REM Cargar y parsear ETH_RPC_URL desde .env
+REM Cargar y parsear ETH_RPC_URL y VITE_CHAIN_ID desde .env
 set "ETH_RPC_URL=http://127.0.0.1:8545"
+set "CHAIN_ID=1"
 if exist "%PROJECT_DIR%\.env" (
     for /f "usebackq tokens=1,2 delims==" %%i in ("%PROJECT_DIR%\.env") do (
         if "%%i"=="ETH_RPC_URL" set "ETH_RPC_URL=%%j"
+        if "%%i"=="VITE_CHAIN_ID" set "CHAIN_ID=%%j"
     )
 )
 set "RPC_TEMP=!ETH_RPC_URL!"
@@ -229,7 +231,7 @@ if "!FORCE_HARDHAT!"=="1" (
 
 if "!USE_ANVIL!"=="1" (
     echo  Abriendo ventana de Anvil blockchain...
-    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id 31337"
+    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id !CHAIN_ID!"
 ) else (
     echo  Abriendo ventana de Hardhat blockchain...
     start "Hardhat Blockchain :!RPC_PORT!" cmd /k "title Hardhat Blockchain :!RPC_PORT! && cd /d "%PROJECT_DIR%" && npx hardhat node --hostname !RPC_HOST! --port !RPC_PORT! --config hardhat.config.cjs"
@@ -245,9 +247,9 @@ if %errorlevel% neq 0 (
 )
 
 if "!USE_ANVIL!"=="1" (
-    echo  [OK] Anvil blockchain activo en puerto !RPC_PORT! - Chain ID 31337.
+    echo  [OK] Anvil blockchain activo en puerto !RPC_PORT! - Chain ID !CHAIN_ID!.
 ) else (
-    echo  [OK] Hardhat blockchain activo en puerto !RPC_PORT! - Chain ID 31337.
+    echo  [OK] Hardhat blockchain activo en puerto !RPC_PORT! - Chain ID !CHAIN_ID!.
 )
 
 :SKIP_BLOCKCHAIN
@@ -536,7 +538,7 @@ if defined ADDR_SECURITY (
 ) else (
     echo      Ver: deployments\localhost.json
 )
-echo      Red            : Chain ID 31337  Anvil/Hardhat local
+echo      Red            : Chain ID !CHAIN_ID!  Anvil/Hardhat local
 echo.
 echo    SERVICIOS
 echo      Blockchain Node: !ETH_RPC_URL!

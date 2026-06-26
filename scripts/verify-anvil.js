@@ -36,10 +36,11 @@ async function verify() {
     const chainIdHex = await rpcCall('eth_chainId');
     const chainId = parseInt(chainIdHex, 16);
     console.log(`✅ Conexión establecida exitosamente.`);
-    console.log(`⛓️  Chain ID: ${chainId} ${chainId === 31337 ? '(Anvil / Hardhat Local)' : ''}`);
+    const expectedChainId = parseInt(process.env.VITE_CHAIN_ID || '1', 10);
+    console.log(`⛓️  Chain ID: ${chainId} ${chainId === expectedChainId ? '(Coincide con configuración)' : ''}`);
 
-    if (chainId !== 31337) {
-      console.warn(`⚠️  Advertencia: El Chain ID actual no es 31337.`);
+    if (chainId !== expectedChainId) {
+      console.warn(`⚠️  Advertencia: El Chain ID actual no es ${expectedChainId}.`);
     }
 
     // 2. Bloque actual
