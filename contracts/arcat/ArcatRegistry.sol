@@ -134,29 +134,67 @@ contract ArcatRegistry {
         );
         require(bytes(hostname).length > 0, "ArcatRegistry: hostname requerido");
         require(bytes(uuid).length > 0,     "ArcatRegistry: uuid requerido");
+
+        address uoContract = msg.sender;
+
+        if (_byUUID[uuid].exists) {
+            DeviceEntry storage existingEntry = _byUUID[uuid];
+            
+            string memory oldHostname = "";
+            for (uint256 i = 0; i < _hostnames.length; i++) {
+                if (_byHostname[_hostnames[i]].uoContract == existingEntry.uoContract && 
+                    _byHostname[_hostnames[i]].tokenId == existingEntry.tokenId) {
+                    oldHostname = _hostnames[i];
+                    break;
+                }
+            }
+            if (bytes(oldHostname).length > 0 && keccak256(bytes(oldHostname)) != keccak256(bytes(hostname))) {
+                _byHostname[oldHostname].exists = false;
+            }
+
+            existingEntry.uoContract = uoContract;
+            existingEntry.tokenId = tokenId;
+            existingEntry.dgCode = dgCode;
+            existingEntry.uoCode = uoCode;
+            existingEntry.exists = true;
+
+            _byHostname[hostname] = existingEntry;
+            _byUUID[uuid] = existingEntry;
+
+            bool hostnameFound = false;
+            for (uint256 i = 0; i < _hostnames.length; i++) {
+                if (keccak256(bytes(_hostnames[i])) == keccak256(bytes(hostname))) {
+                    hostnameFound = true;
+                    break;
+                }
+            }
+            if (!hostnameFound) {
+                _hostnames.push(hostname);
+            }
+
+            emit DeviceIndexed(uoContract, tokenId, hostname, uuid, dgCode, uoCode, block.timestamp);
+            return;
+        }
+
         require(
             !_byHostname[hostname].exists,
             "ArcatRegistry: hostname ya indexado"
         );
 
         DeviceEntry memory entry = DeviceEntry({
-            uoContract: msg.sender == admin ? msg.sender : msg.sender,
+            uoContract: uoContract,
             tokenId:    tokenId,
             dgCode:     dgCode,
             uoCode:     uoCode,
             exists:     true
         });
 
-        // Si lo registra el admin en nombre de una UO, usamos dirección del caller
-        // En el script de deploy, se llama directamente como admin con la UO correcta
-        entry.uoContract = msg.sender;
-
         _byHostname[hostname] = entry;
         _byUUID[uuid]         = entry;
         _hostnames.push(hostname);
         totalDevices++;
 
-        emit DeviceIndexed(msg.sender, tokenId, hostname, uuid, dgCode, uoCode, block.timestamp);
+        emit DeviceIndexed(uoContract, tokenId, hostname, uuid, dgCode, uoCode, block.timestamp);
     }
 
     /**
@@ -174,6 +212,46 @@ contract ArcatRegistry {
         require(uoContract != address(0),   "ArcatRegistry: UO invalida");
         require(bytes(hostname).length > 0, "ArcatRegistry: hostname requerido");
         require(bytes(uuid).length > 0,     "ArcatRegistry: uuid requerido");
+
+        if (_byUUID[uuid].exists) {
+            DeviceEntry storage existingEntry = _byUUID[uuid];
+            
+            string memory oldHostname = "";
+            for (uint256 i = 0; i < _hostnames.length; i++) {
+                if (_byHostname[_hostnames[i]].uoContract == existingEntry.uoContract && 
+                    _byHostname[_hostnames[i]].tokenId == existingEntry.tokenId) {
+                    oldHostname = _hostnames[i];
+                    break;
+                }
+            }
+            if (bytes(oldHostname).length > 0 && keccak256(bytes(oldHostname)) != keccak256(bytes(hostname))) {
+                _byHostname[oldHostname].exists = false;
+            }
+
+            existingEntry.uoContract = uoContract;
+            existingEntry.tokenId = tokenId;
+            existingEntry.dgCode = dgCode;
+            existingEntry.uoCode = uoCode;
+            existingEntry.exists = true;
+
+            _byHostname[hostname] = existingEntry;
+            _byUUID[uuid] = existingEntry;
+
+            bool hostnameFound = false;
+            for (uint256 i = 0; i < _hostnames.length; i++) {
+                if (keccak256(bytes(_hostnames[i])) == keccak256(bytes(hostname))) {
+                    hostnameFound = true;
+                    break;
+                }
+            }
+            if (!hostnameFound) {
+                _hostnames.push(hostname);
+            }
+
+            emit DeviceIndexed(uoContract, tokenId, hostname, uuid, dgCode, uoCode, block.timestamp);
+            return;
+        }
+
         require(
             !_byHostname[hostname].exists,
             "ArcatRegistry: hostname ya indexado"

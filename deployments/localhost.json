@@ -1,9 +1,9 @@
 {
   "network": "localhost",
-  "deployedAt": "2026-06-25T15:07:07.770Z",
+  "deployedAt": "2026-06-26T14:20:49.957Z",
   "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
   "contracts": {
-    "SecurityAudit": "0xa8d14b3d9e2589cea8644bb0f67eb90d21079f8b",
-    "AlertRegistry": "0x716473fb4e7cd49c7d1ec7ec6d7490a03d9da332"
+    "SecurityAudit": "0xa899118f4bccb62f8c6a37887a4f450d8a4e92e0",
+    "AlertRegistry": "0xb60971942e4528a811d24826768bc91ad1383d21"
   }
 }

@@ -187,16 +187,18 @@ describe("ARCAT — Multicontratos SBT", function () {
       expect(found).to.be.true;
     });
 
-    it("rechaza UUID duplicado", async () => {
+    it("permite re-registrar un UUID duplicado y actualiza su info", async () => {
       const { deployer, uoRecaudacion } = await deployARCAT();
       await uoRecaudacion.write.registerDevice([
         deployer.account.address, "Srv 1", "uuid-dup-001", "host-1", 0,
       ]);
-      await expect(
-        uoRecaudacion.write.registerDevice([
-          deployer.account.address, "Srv 2", "uuid-dup-001", "host-2", 0,
-        ])
-      ).to.be.rejectedWith("UUID ya registrado");
+      await uoRecaudacion.write.registerDevice([
+        deployer.account.address, "Srv 2", "uuid-dup-001", "host-2", 0,
+      ]);
+      expect(Number(await uoRecaudacion.read.getDevicesCount())).to.equal(1);
+      const dev = await uoRecaudacion.read.getDevice([0n]);
+      expect(dev.deviceName).to.equal("Srv 2");
+      expect(dev.hostname).to.equal("host-2");
     });
 
     it("rechaza hostname duplicado", async () => {
@@ -379,6 +381,21 @@ describe("ARCAT — Multicontratos SBT", function () {
           uoRecaudacion.address, 1n, "host-dup", "uuid-dup-2", "DGR", "UO-REC",
         ])
       ).to.be.rejectedWith("ya indexado");
+    });
+
+    it("actualiza info si el UUID ya existe en el indice", async () => {
+      const { arcatRegistry, uoRecaudacion } = await deployARCAT();
+      await arcatRegistry.write.adminIndexDevice([
+        uoRecaudacion.address, 0n, "host-1", "uuid-dup-1", "DGR", "UO-REC",
+      ]);
+      await arcatRegistry.write.adminIndexDevice([
+        uoRecaudacion.address, 0n, "host-2", "uuid-dup-1", "DGR", "UO-REC",
+      ]);
+      const [, , foundNew] = await arcatRegistry.read.lookupByHostname(["host-2"]);
+      expect(foundNew).to.be.true;
+
+      const [, , foundOld] = await arcatRegistry.read.lookupByHostname(["host-1"]);
+      expect(foundOld).to.be.false;
     });
 
     it("devuelve found=false para hostname no registrado", async () => {

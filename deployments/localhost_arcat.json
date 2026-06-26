@@ -1,91 +1,91 @@
 {
   "network": "localhost",
-  "deployedAt": "2026-06-25T15:07:09.741Z",
+  "deployedAt": "2026-06-26T14:20:52.493Z",
   "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
   "contracts": {
-    "ArcatRoot": "0x64079a2edd1104a2323e2b732a1244bce011b1f5",
-    "ArcatRegistry": "0x0deeb4b6492c1a55bb7c0555aaff65ff6dc424b2",
+    "ArcatRoot": "0xd185b4846e5fd5419fd4d077dc636084befc51c0",
+    "ArcatRegistry": "0xf94ab55a20b32ac37c3a105f12db535986697945",
     "DireccionesGenerales": {
       "DGR": {
         "name": "Direccion General de Rentas",
-        "address": "0xe24e7570fe7207adaaaa8c6c89a59850391b5276"
+        "address": "0xbcf063a9eb18bc3c6eb005791c61801b7cb16fe4"
       },
       "DGC": {
         "name": "Direccion General de Catastro",
-        "address": "0x4e76fbe44fa5dae076a7f4f676250e7941421fba"
+        "address": "0xbb57fe325e769dedb1236525a91cded842143fa7"
       },
       "DGRPI": {
         "name": "Direccion General de Registro de la Propiedad Inmobiliaria y de Mandatos",
-        "address": "0xa138575a030a2f4977d19cc900781e7be3fd2bc0"
+        "address": "0x03f7f064e6ced8e154e3fdaaf92dccc4e818e97b"
       },
       "STAFF": {
         "name": "Dependencias Staff ARCAT",
-        "address": "0xe5b6f5e695ba6e4aed92b68c4cc8df1160d69a81"
+        "address": "0xad3e631c01798f9aae4692dabf791a62c226c5d4"
       }
     },
     "UnidadesOperativas": {
       "DGR": {
         "UO-REC": {
           "name": "De Recaudacion",
-          "address": "0xfe92134da38df8c399a90a540f20187d19216e05"
+          "address": "0x364c7188028348566e38d762f6095741c49f492b"
         },
         "UO-FIS": {
           "name": "De Fiscalizacion",
-          "address": "0xe519389f8c262d4301fd2830196fb7d0021daf59"
+          "address": "0xc3549920b94a795d75e6c003944943d552c46f97"
         }
       },
       "DGC": {
         "UO-SAN": {
           "name": "De Saneamiento de Titulo",
-          "address": "0x49aef2c4005bf572665b09014a563b5b9e46df21"
+          "address": "0x6712008ccd96751d586fdba0def5495e0e22d904"
         },
         "UO-CAR": {
           "name": "De Cartografia",
-          "address": "0x72f853e9e202600c5017b5a060168603c3ed7368"
+          "address": "0x4d1338fa46ca6060f1472b70599cc635ad275eda"
         },
         "UO-REG": {
           "name": "De Registro Territorial",
-          "address": "0x7ab5ceee0ff304b053ce1f67d84c33f0ff407a55"
+          "address": "0x1e2e9190cea3a97b5aa85d9757117f499d31c47d"
         }
       },
       "DGRPI": {
         "UO-RIN": {
           "name": "De Registracion Inmobiliaria",
-          "address": "0xf524930660f75cf602e909c15528d58459ab2a56"
+          "address": "0x6cd036fdbd89baa51c8722eec0b56ceed301cc68"
         },
         "UO-PUB": {
           "name": "De Publicidad Inmobiliaria y Medidas Cautelares",
-          "address": "0x2aa12f98795e7a65072950afba9d1e023d398241"
+          "address": "0x295129609d6876f5ecc62052ba6bc082139a982c"
         }
       },
       "STAFF": {
         "UO-ADM": {
           "name": "De Administracion",
-          "address": "0x01c93598eec9131c05a2450cd033cbd8f82da31e"
+          "address": "0x4b901e2db7c412d966689e8d3cf479294c456f1e"
         },
         "UO-RHH": {
           "name": "De Capital Humano",
-          "address": "0x1f2c6e90f3df741e0191eabb1170f0b9673f12b3"
+          "address": "0xcf23ce2ffa1ddd9cc2b445ae6778c4dbd605a1a0"
         },
         "UO-TEC": {
           "name": "De Tecnologias y Sistemas",
-          "address": "0xb354ecf032e9e14442be590d9eaee37d2924b67a"
+          "address": "0xba840136e489cb5ecf9d9988421f3a9f45e0c341"
         },
         "UO-JUR": {
           "name": "De Asuntos Juridicos",
-          "address": "0xe4a4b3bc2787aa913e5b4bbce907e8b213250bde"
+          "address": "0x23228469b3439d81dc64e3523068976201ba08c3"
         },
         "UO-GRE": {
           "name": "De Gestion y Recaudacion de Recursos Especificos",
-          "address": "0x0bbfcd7a557ffb8a70cb0948ff680f0e573bbff2"
+          "address": "0x2ca60d89144d4cdf85da87af4fe12abf9265f28c"
         },
         "UO-AUD": {
           "name": "Auditoria Interna",
-          "address": "0x645d817611e0cdaf9cd43332c4e369b9e333471d"
+          "address": "0x88b9ad010a699cc0c8c5c5ea8baf90a0c375df1a"
         },
         "UO-SEC": {
           "name": "Secretaria General",
-          "address": "0x9a8164ca007ff0899140719e9aec9a9c889cbf1e"
+          "address": "0x6b5cf024365d5d5d0786673780ca7e3f07f85b63"
         }
       }
     }

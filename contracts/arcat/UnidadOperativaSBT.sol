@@ -191,7 +191,41 @@ contract UnidadOperativaSBT {
         require(bytes(deviceName).length > 0,   "UO-SBT: nombre requerido");
         require(bytes(uuid).length > 0,         "UO-SBT: uuid requerido");
         require(bytes(hostname).length > 0,     "UO-SBT: hostname requerido");
-        require(!_uuidExists[uuid],             "UO-SBT: UUID ya registrado");
+
+        if (_uuidExists[uuid]) {
+            tokenId = _uuidToToken[uuid];
+            
+            string memory oldHostname = _devices[tokenId].hostname;
+            if (keccak256(bytes(oldHostname)) != keccak256(bytes(hostname))) {
+                require(!_hostnameExists[hostname], "UO-SBT: hostname ya registrado");
+                _hostnameExists[oldHostname] = false;
+                _hostnameToToken[oldHostname] = 0;
+            }
+            
+            _devices[tokenId].deviceName = deviceName;
+            _devices[tokenId].hostname = hostname;
+            _devices[tokenId].deviceType = dType;
+            _devices[tokenId].isActive = true;
+            _devices[tokenId].registeredAt = block.timestamp;
+            _devices[tokenId].registeredBy = msg.sender;
+            
+            _hostnameToToken[hostname] = tokenId;
+            _hostnameExists[hostname] = true;
+            
+            if (_owners[tokenId] != deviceOwner) {
+                address oldOwner = _owners[tokenId];
+                if (_balances[oldOwner] > 0) {
+                    _balances[oldOwner]--;
+                }
+                _owners[tokenId] = deviceOwner;
+                _balances[deviceOwner]++;
+                emit Transfer(oldOwner, deviceOwner, tokenId);
+            }
+            
+            emit DeviceRegistered(tokenId, deviceName, uuid, hostname, dType, block.timestamp);
+            return tokenId;
+        }
+
         require(!_hostnameExists[hostname],     "UO-SBT: hostname ya registrado");
 
         tokenId = _tokenIdCounter++;
