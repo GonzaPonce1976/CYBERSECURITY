@@ -1326,7 +1326,7 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta = {}) {
           <span class="audit-device-label">🔧 Tipo</span>
           <span class="audit-device-val">${deviceMeta.deviceType || '—'}</span>
         </div>
-        <div class="audit-device-row audit-device-row--full">
+        <div class="audit-device-row">
           <span class="audit-device-label">🔑 UUID</span>
           <span class="audit-device-val mono" style="font-size:0.72rem; word-break:break-all; letter-spacing:0.02em">${deviceMeta.uuid || '—'}</span>
         </div>
