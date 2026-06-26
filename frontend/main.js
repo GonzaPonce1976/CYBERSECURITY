@@ -1159,9 +1159,12 @@ async function selectUnidadOperativa(address, name, code, dgCode) {
         <div class="empty-state"><div class="spin">⏳</div> Cargando dispositivos...</div>
       </div>
 
-      <div class="section-title">Timeline de Trazabilidad y Auditorías</div>
+      <div class="section-title">⛓️ Timeline de Trazabilidad y Auditorías On-Chain</div>
       <div class="audits-timeline" id="arcat-audits-timeline">
-        <p class="empty-state-detail" style="height:150px">Selecciona un dispositivo del inventario para auditar sus eventos.</p>
+        <div class="audit-select-hint">
+          <div class="audit-select-icon">👆</div>
+          <div class="audit-select-text">Haz clic en una fila del inventario para cargar el historial de auditorías on-chain del dispositivo</div>
+        </div>
       </div>
     `;
 
@@ -1199,24 +1202,34 @@ async function loadUODevices(address, uoCode, dgCode) {
             <th>Tipo</th>
             <th>Estado</th>
             <th>Threat Score</th>
+            <th>Auditorías</th>
           </tr>
         </thead>
         <tbody>
           ${devices.map(d => {
             const dev = d.device;
-            const activeStatus = dev.is_active ? '<span class="status-dot online" style="display:inline-block;position:static;margin-right:5px"></span>Activo (Encendido)' : '<span class="status-dot offline" style="display:inline-block;position:static;margin-right:5px"></span>Inactivo (Apagado)';
+            const activeStatus = dev.is_active
+              ? '<span class="status-dot online" style="display:inline-block;position:static;margin-right:5px"></span>Activo'
+              : '<span class="status-dot offline" style="display:inline-block;position:static;margin-right:5px"></span>Inactivo';
             const threatClass = (d.threat_level || 'CLEAN').toLowerCase();
             const isIp = (val) => val && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(val);
-            const deviceIp = isIp(dev.device_name) ? dev.device_name : (isIp(dev.hostname) ? dev.hostname : (dev.is_active ? '192.168.125.5' : '192.168.125.10'));
+            const deviceIp = isIp(dev.device_name) ? dev.device_name : (isIp(dev.hostname) ? dev.hostname : '—');
+            const audCount = parseInt(dev.audits_count || '0', 10);
+            const audBadge = audCount > 0
+              ? `<span class="audit-count-badge has-audits" title="${audCount} auditoría(s) on-chain">${audCount} 📋</span>`
+              : `<span class="audit-count-badge" title="Sin auditorías registradas">0</span>`;
             return `
-              <tr class="device-row" data-token-id="${dev.token_id}" data-hostname="${dev.hostname}">
+              <tr class="device-row" data-token-id="${dev.token_id}" data-hostname="${dev.hostname}"
+                  data-device-ip="${deviceIp}" data-device-type="${dev.device_type}"
+                  data-registered-at="${dev.registered_at}" data-audits-count="${audCount}">
                 <td class="mono">#${dev.token_id}</td>
                 <td style="font-weight:600">${deviceIp}</td>
                 <td class="mono">${dev.hostname}</td>
-                <td class="mono">${dev.uuid}</td>
+                <td class="mono" style="font-size:0.68rem">${dev.uuid}</td>
                 <td><span class="badge badge-INFO">${dev.device_type}</span></td>
                 <td>${activeStatus}</td>
                 <td><span class="threat-badge ${threatClass}">${d.threat_level || 'CLEAN'} (${dev.threat_score})</span></td>
+                <td>${audBadge}</td>
               </tr>
             `;
           }).join('')}
@@ -1229,7 +1242,13 @@ async function loadUODevices(address, uoCode, dgCode) {
       row.addEventListener('click', () => {
         tableContainer.querySelectorAll('.device-row').forEach(r => r.classList.remove('selected'));
         row.classList.add('selected');
-        loadDeviceAudits(address, row.dataset.tokenId, row.dataset.hostname);
+        const tokenId = row.dataset.tokenId;
+        const hostname = row.dataset.hostname;
+        const deviceIp = row.dataset.deviceIp;
+        const deviceType = row.dataset.deviceType;
+        const registeredAt = row.dataset.registeredAt;
+        const auditsCount = row.dataset.auditsCount;
+        loadDeviceAudits(address, tokenId, hostname, { deviceIp, deviceType, registeredAt, auditsCount });
       });
     });
 
@@ -1243,11 +1262,42 @@ async function loadUODevices(address, uoCode, dgCode) {
   }
 }
 
-async function loadDeviceAudits(uoAddress, tokenId, hostname) {
+/**
+ * Formatea un timestamp del API: puede ser string ISO-8601 (del Rust) o número Unix.
+ * @param {string|number} ts
+ * @returns {string}
+ */
+function formatAuditTimestamp(ts) {
+  if (!ts) return '—';
+  // Si es un string ISO (como retorna el cliente Rust), parsear directamente
+  if (typeof ts === 'string' && ts.includes('T')) {
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? ts : d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'medium' });
+  }
+  // Si es Unix timestamp numérico (segundos)
+  const num = Number(ts);
+  if (!isNaN(num) && num > 0) {
+    return new Date(num * 1000).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'medium' });
+  }
+  return String(ts);
+}
+
+/**
+ * Carga y renderiza el historial de auditorías on-chain para un dispositivo específico.
+ * @param {string} uoAddress  - Dirección del contrato UO
+ * @param {string|number} tokenId - ID del token SBT
+ * @param {string} hostname  - Hostname del dispositivo
+ * @param {object} [deviceMeta] - Metadata adicional del dispositivo (IP, tipo, etc.)
+ */
+async function loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta = {}) {
   const timeline = $('arcat-audits-timeline');
   if (!timeline) return;
 
-  timeline.innerHTML = `<div class="empty-state"><div class="spin">⏳</div> Cargando eventos de auditoría...</div>`;
+  timeline.innerHTML = `
+    <div class="empty-state" style="padding:24px 20px">
+      <div class="spin" style="font-size:1.5rem">⏳</div>
+      <p style="margin-top:8px">Consultando auditorías on-chain para <strong>${hostname}</strong>...</p>
+    </div>`;
 
   try {
     const res = await api.getArcatUnitAudits(uoAddress);
@@ -1256,45 +1306,124 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname) {
     // Filtrar auditorías para este tokenId específico
     const deviceAudits = audits.filter(a => String(a.token_id) === String(tokenId));
 
+    // ── Construir cabecera del dispositivo seleccionado ──
+    const regDate = deviceMeta.registeredAt
+      ? formatAuditTimestamp(deviceMeta.registeredAt)
+      : '—';
+    const deviceHeaderHtml = `
+      <div class="audit-device-detail">
+        <div class="audit-device-row">
+          <span class="audit-device-label">🖥️ Hostname</span>
+          <span class="audit-device-val mono">${hostname}</span>
+        </div>
+        <div class="audit-device-row">
+          <span class="audit-device-label">🌐 IP Dispositivo</span>
+          <span class="audit-device-val">${deviceMeta.deviceIp || '—'}</span>
+        </div>
+        <div class="audit-device-row">
+          <span class="audit-device-label">🔧 Tipo</span>
+          <span class="audit-device-val">${deviceMeta.deviceType || '—'}</span>
+        </div>
+        <div class="audit-device-row">
+          <span class="audit-device-label">📅 Registrado</span>
+          <span class="audit-device-val">${regDate}</span>
+        </div>
+        <div class="audit-device-row">
+          <span class="audit-device-label">📋 Auditorías on-chain</span>
+          <span class="audit-device-val" style="color: ${deviceAudits.length > 0 ? 'var(--orange)' : 'var(--green)'}; font-weight:700">
+            ${deviceAudits.length}
+          </span>
+        </div>
+      </div>`;
+
+    // ── Botón de recarga ──
+    const reloadBtnHtml = `
+      <div style="display:flex; justify-content:flex-end; margin-bottom:0.5rem;">
+        <button id="btn-reload-audits" class="btn-secondary btn-sm" style="font-size:0.72rem; padding:4px 10px; display:flex; align-items:center; gap:6px;">
+          🔄 Actualizar Auditorías
+        </button>
+      </div>`;
+
     if (!deviceAudits.length) {
-      timeline.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">🛡️</div>
-          <p>Dispositivo limpio — No se registran alertas de seguridad on-chain para #${tokenId} (${hostname})</p>
+      timeline.innerHTML = deviceHeaderHtml + `
+        <div class="audit-clean-state">
+          <div class="audit-clean-icon">🛡️</div>
+          <div class="audit-clean-title">Dispositivo Sin Alertas</div>
+          <p class="audit-clean-desc">No se registran eventos de seguridad on-chain para el token <strong>#${tokenId}</strong>.
+          Esto indica que el dispositivo <strong>${hostname}</strong> opera sin incidentes detectados.</p>
+          ${reloadBtnHtml}
         </div>
       `;
+      // Bind reload
+      document.getElementById('btn-reload-audits')?.addEventListener('click', () => {
+        loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta);
+      });
       return;
     }
 
-    timeline.innerHTML = deviceAudits.map(a => {
+    // ── Renderizar eventos de auditoría ──
+    const itemsHtml = deviceAudits.map((a, idx) => {
       const aud = a.audit || {};
       const sevClass = (aud.severity || 'INFO').toLowerCase();
-      const date = aud.timestamp ? new Date(Number(aud.timestamp) * 1000).toLocaleString('es') : '—';
-      const txHash = aud.txHash ? aud.txHash.slice(0, 10) + '…' + aud.txHash.slice(-8) : 'N/A';
+      const dateStr = formatAuditTimestamp(aud.timestamp);
+
+      // data_hash: mostrar los primeros 10 y últimos 8 caracteres
+      const dataHash = aud.data_hash || '';
+      const hashDisplay = dataHash.length > 20
+        ? dataHash.slice(0, 10) + '…' + dataHash.slice(-8)
+        : (dataHash || '—');
+
+      // IOC hashes
+      const iocHashes = Array.isArray(aud.ioc_hashes) ? aud.ioc_hashes : [];
+      const iocHtml = iocHashes.length > 0
+        ? `<div class="audit-ioc-list">
+             <span class="audit-ioc-label">🔍 IoC Hashes:</span>
+             ${iocHashes.map(h => `<span class="audit-ioc-hash" title="${h}">${h.slice(0, 12)}…</span>`).join('')}
+           </div>`
+        : '';
+
+      // Reporter address
+      const reporter = aud.reporter || '';
+      const reporterDisplay = reporter.length > 12
+        ? reporter.slice(0, 8) + '…' + reporter.slice(-6)
+        : (reporter || 'N/A');
+
       return `
-        <div class="audit-timeline-item severity-${sevClass}">
+        <div class="audit-timeline-item severity-${sevClass}" style="animation-delay: ${idx * 60}ms">
           <div class="audit-timeline-header">
             <span class="audit-timeline-title">
               <span class="threat-badge ${sevClass}">${aud.severity || 'INFO'}</span>
               <strong>${aud.event_type || 'Auditoría'}</strong>
             </span>
-            <span class="audit-timeline-time">${date}</span>
+            <span class="audit-timeline-time">🕐 ${dateStr}</span>
           </div>
           <div class="audit-timeline-desc">${aud.description || '—'}</div>
+          ${iocHtml}
           <div class="audit-timeline-footer">
             <span class="audit-timeline-meta">📍 IP Origen: <strong>${aud.src_ip || 'N/A'}</strong></span>
             ${aud.malware_family ? `<span class="audit-timeline-meta">🦠 Familia: <strong>${aud.malware_family}</strong></span>` : ''}
-            ${aud.txHash ? `<a href="https://etherscan.io/tx/${aud.txHash}" target="_blank" class="audit-timeline-meta tx">⛓️ Tx: ${txHash}</a>` : ''}
+            <span class="audit-timeline-meta" title="SHA-256 del payload Wazuh">🔐 Hash: <code style="font-size:0.65rem;color:var(--cyan)">${hashDisplay}</code></span>
+            ${reporter ? `<span class="audit-timeline-meta" title="Dirección del reporter on-chain">🤖 Reporter: <code style="font-size:0.65rem">${reporterDisplay}</code></span>` : ''}
           </div>
         </div>
       `;
     }).join('');
 
+    timeline.innerHTML = deviceHeaderHtml + reloadBtnHtml + `
+      <div class="audit-items-list">${itemsHtml}</div>
+    `;
+
+    // Bind reload button
+    document.getElementById('btn-reload-audits')?.addEventListener('click', () => {
+      loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta);
+    });
+
   } catch (e) {
     timeline.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">⚠️</div>
-        <p>Error cargando auditorías: ${e.message}</p>
+        <p>Error cargando auditorías: <strong>${e.message}</strong></p>
+        <button onclick="loadDeviceAudits('${uoAddress}','${tokenId}','${hostname}')" class="btn-secondary btn-sm" style="margin-top:1rem">Reintentar</button>
       </div>
     `;
   }

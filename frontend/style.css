@@ -1066,6 +1066,139 @@ tr:last-child td { border-bottom: none; }
   flex-direction: column;
   gap: 0.75rem;
   margin-top: 0.5rem;
+  max-height: 580px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scroll-behavior: smooth;
+}
+
+.audits-timeline::-webkit-scrollbar { width: 5px; }
+.audits-timeline::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+.audits-timeline::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.25); border-radius: 3px; }
+.audits-timeline::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.5); }
+
+/* Audit items list container (inner scroll wrapper) */
+.audit-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Timeline item entry animation */
+@keyframes auditItemIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Audit count badge on inventory table */
+.audit-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+.audit-count-badge.has-audits {
+  background: rgba(255, 123, 0, 0.1);
+  color: #ff9f47;
+  border-color: rgba(255, 123, 0, 0.25);
+}
+
+/* Clean device state panel */
+.audit-clean-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: rgba(0, 255, 157, 0.03);
+  border: 1px solid rgba(0, 255, 157, 0.12);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.audit-clean-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 157, 0.4));
+}
+
+.audit-clean-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #00ff9d;
+  margin-top: 0.25rem;
+}
+
+.audit-clean-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* IOC hash display within audit items */
+.audit-ioc-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  background: rgba(0, 212, 255, 0.04);
+  border-left: 2px solid rgba(0, 212, 255, 0.3);
+  border-radius: 0 4px 4px 0;
+}
+
+.audit-ioc-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.audit-ioc-hash {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--cyan);
+  border-radius: 3px;
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  cursor: help;
+}
+
+/* Select-device hint in timeline (before row is clicked) */
+.audit-select-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.audit-select-icon {
+  font-size: 2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.audit-select-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-width: 300px;
+  line-height: 1.5;
 }
 
 .audit-timeline-item {
@@ -1077,6 +1210,7 @@ tr:last-child td { border-bottom: none; }
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  animation: auditItemIn 0.3s ease-out both;
 }
 
 .audit-timeline-item::before {
