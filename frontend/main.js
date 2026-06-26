@@ -1221,7 +1221,8 @@ async function loadUODevices(address, uoCode, dgCode) {
             return `
               <tr class="device-row" data-token-id="${dev.token_id}" data-hostname="${dev.hostname}"
                   data-device-ip="${deviceIp}" data-device-type="${dev.device_type}"
-                  data-registered-at="${dev.registered_at}" data-audits-count="${audCount}">
+                  data-registered-at="${dev.registered_at}" data-audits-count="${audCount}"
+                  data-uuid="${dev.uuid}">
                 <td class="mono">#${dev.token_id}</td>
                 <td style="font-weight:600">${deviceIp}</td>
                 <td class="mono">${dev.hostname}</td>
@@ -1248,7 +1249,8 @@ async function loadUODevices(address, uoCode, dgCode) {
         const deviceType = row.dataset.deviceType;
         const registeredAt = row.dataset.registeredAt;
         const auditsCount = row.dataset.auditsCount;
-        loadDeviceAudits(address, tokenId, hostname, { deviceIp, deviceType, registeredAt, auditsCount });
+        const uuid = row.dataset.uuid;
+        loadDeviceAudits(address, tokenId, hostname, { deviceIp, deviceType, registeredAt, auditsCount, uuid });
       });
     });
 
@@ -1323,6 +1325,10 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta = {}) {
         <div class="audit-device-row">
           <span class="audit-device-label">🔧 Tipo</span>
           <span class="audit-device-val">${deviceMeta.deviceType || '—'}</span>
+        </div>
+        <div class="audit-device-row audit-device-row--full">
+          <span class="audit-device-label">🔑 UUID</span>
+          <span class="audit-device-val mono" style="font-size:0.72rem; word-break:break-all; letter-spacing:0.02em">${deviceMeta.uuid || '—'}</span>
         </div>
         <div class="audit-device-row">
           <span class="audit-device-label">📅 Registrado</span>

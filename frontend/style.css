@@ -1310,3 +1310,7 @@ tr:last-child td { border-bottom: none; }
   color: var(--text-secondary);
 }
 
+/* UUID row spans all columns so the long value has room */
+.audit-device-row--full {
+  grid-column: 1 / -1;
+}
