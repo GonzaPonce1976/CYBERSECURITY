@@ -1314,3 +1314,412 @@ tr:last-child td { border-bottom: none; }
 .audit-device-row--full {
   grid-column: 1 / -1;
 }
+
+/* ── Antivirus View CSS ─────────────────────────────────────── */
+.av-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.av-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.av-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--cyan);
+}
+
+.av-kpi-total::before { background: var(--purple); }
+.av-kpi-clean::before { background: var(--green); }
+.av-kpi-infected::before { background: var(--red); }
+.av-kpi-error::before { background: var(--orange); }
+.av-kpi-threats::before { background: #f43f5e; }
+
+.av-kpi-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.av-kpi-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.av-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.av-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--mono);
+}
+
+.av-kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Resaltado cuando hay infectados */
+.av-kpi-infected.av-kpi-alert {
+  background: rgba(255, 58, 92, 0.04);
+  border-color: rgba(255, 58, 92, 0.25);
+  animation: avFlashRed 2s infinite ease-in-out;
+}
+
+@keyframes avFlashRed {
+  0%, 100% { border-color: rgba(255, 58, 92, 0.25); }
+  50% { border-color: rgba(255, 58, 92, 0.6); box-shadow: 0 0 12px rgba(255, 58, 92, 0.2); }
+}
+
+/* Controles de filtro */
+.av-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.01);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.av-search-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.av-search-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.15);
+}
+
+.av-filter-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.av-filter-select:hover {
+  border-color: var(--border-glow);
+}
+
+.av-last-updated {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-left: auto;
+}
+
+/* Badges y tabla */
+.av-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.av-badge-clean { background: rgba(0, 255, 157, 0.08); color: var(--green); border: 1px solid rgba(0, 255, 157, 0.2); }
+.av-badge-infected { background: rgba(255, 58, 92, 0.08); color: var(--red); border: 1px solid rgba(255, 58, 92, 0.2); }
+.av-badge-error { background: rgba(255, 123, 0, 0.08); color: var(--orange); border: 1px solid rgba(255, 123, 0, 0.2); }
+.av-badge-pending { background: rgba(255, 215, 0, 0.08); color: var(--yellow); border: 1px solid rgba(255, 215, 0, 0.2); }
+
+.av-mode-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.av-mode-daily { background: rgba(124, 58, 237, 0.12); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.3); }
+.av-mode-weekly { background: rgba(0, 212, 255, 0.12); color: var(--cyan); border: 1px solid rgba(0, 212, 255, 0.3); }
+
+.av-row-infected {
+  background: rgba(255, 58, 92, 0.02) !important;
+}
+
+.av-row-infected td {
+  border-bottom: 1px solid rgba(255, 58, 92, 0.1);
+}
+
+.av-row-infected:hover td {
+  background: rgba(255, 58, 92, 0.04) !important;
+}
+
+.av-infected-count {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.av-tx-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-family: var(--mono);
+}
+
+.av-tx-link:hover {
+  text-decoration: underline;
+}
+
+.av-tx-none {
+  color: var(--text-muted);
+}
+
+.av-detail-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.av-detail-btn:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(255, 58, 92, 0.3);
+}
+
+/* Modal Estilo CyberSec */
+.av-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 14, 26, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.av-modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  animation: avModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.av-modal-wide {
+  max-width: 600px;
+}
+
+@keyframes avModalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.av-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.av-modal-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.av-modal-close {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 20px;
+  padding: 0 6px;
+  transition: var(--transition);
+}
+
+.av-modal-close:hover {
+  color: var(--red);
+}
+
+.av-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.av-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.015);
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.av-detail-meta div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.av-threats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.av-threats-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.av-threat-item {
+  background: rgba(255, 58, 92, 0.04);
+  border: 1px solid rgba(255, 58, 92, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.av-threat-item code {
+  color: #f43f5e;
+  font-family: var(--mono);
+  word-break: break-all;
+}
+
+.av-bc-info {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  word-break: break-all;
+}
+
+.av-bc-info code {
+  font-family: var(--mono);
+  color: #fff;
+}
+
+/* Guía de instalación */
+.av-install-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.av-code-block {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.av-code-block code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--green);
+  user-select: all;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.av-copy-btn {
+  background: var(--purple);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.av-copy-btn:hover {
+  opacity: 0.9;
+}
+
+.av-install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.av-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.av-step-num {
+  background: var(--cyan-dim);
+  border: 1px solid var(--border-glow);
+  color: var(--cyan);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+

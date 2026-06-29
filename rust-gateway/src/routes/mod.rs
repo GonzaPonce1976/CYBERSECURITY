@@ -8,6 +8,7 @@ pub mod health;
 pub mod ws;
 pub mod ioc;
 pub mod arcat;
+pub mod antivirus;
 
 use axum::Router;
 use std::sync::Arc;
@@ -16,13 +17,14 @@ use crate::state::AppState;
 /// Construye el router principal de la API REST
 pub fn api_router() -> Router<Arc<AppState>> {
     Router::new()
-        .nest("/alerts", alerts::router())
-        .nest("/ip",     ip::router())
-        .nest("/cve",    cve::router())
-        .nest("/audit",  audit::router())
-        .nest("/health", health::router())
-        .nest("/ioc",    ioc::router())
-        .nest("/arcat",  arcat::router())
+        .nest("/alerts",    alerts::router())
+        .nest("/ip",        ip::router())
+        .nest("/cve",       cve::router())
+        .nest("/audit",     audit::router())
+        .nest("/health",    health::router())
+        .nest("/ioc",       ioc::router())
+        .nest("/arcat",     arcat::router())
+        .nest("/antivirus", antivirus::router())
 }
 
 /// Construye el router de WebSocket

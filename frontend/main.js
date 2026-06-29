@@ -1974,6 +1974,11 @@ async function init() {
   document.getElementById('nav-audit')?.addEventListener('click', loadAuditTrail);
   document.getElementById('nav-arcat')?.addEventListener('click', loadArcatOverview);
 
+  // ── Antivirus — cargar cuando se activa la vista ──────────────────────────
+  document.getElementById('nav-antivirus')?.addEventListener('click', () => {
+    loadAntivirusView();
+  });
+
   // Contrato SecurityAudit — mostrar dirección dinámica real del gateway al iniciar
   try {
     const chain = await api.checkBlockchain(); // Corrección: usar api.checkBlockchain() en vez de checkBlockchain() ya que se define en api.js
@@ -1998,3 +2003,230 @@ async function init() {
 }
 
 init();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🛡️  MÓDULO ANTIVIRUS — ClamAV Integration
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Cache interno de resultados antivirus para filtrado client-side */
+let _avResultsCache = [];
+
+/** Carga la vista antivirus completa: KPIs + tabla de dispositivos */
+async function loadAntivirusView() {
+  await Promise.all([loadAntivirusSummary(), loadAntivirusResults()]);
+  const now = new Date().toLocaleTimeString('es-AR');
+  const el = document.getElementById('av-last-updated');
+  if (el) el.textContent = `Actualizado: ${now}`;
+}
+
+/** Carga y renderiza las tarjetas KPI de estadísticas */
+async function loadAntivirusSummary() {
+  try {
+    const BASE = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:8080';
+    const res  = await fetch(`${BASE}/api/antivirus/summary`);
+    const json = await res.json();
+    const d    = json.data || {};
+
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val ?? '--';
+    };
+
+    set('av-kpi-total',    d.total_devices ?? 0);
+    set('av-kpi-clean',    d.clean         ?? 0);
+    set('av-kpi-infected', d.infected      ?? 0);
+    set('av-kpi-error',    (d.error ?? 0) + (d.pending ?? 0));
+    set('av-kpi-threats',  d.total_infected_files ?? 0);
+
+    // Resaltar tarjeta infectados si hay amenazas
+    const infCard = document.querySelector('.av-kpi-infected');
+    if (infCard) {
+      infCard.classList.toggle('av-kpi-alert', (d.infected ?? 0) > 0);
+    }
+  } catch (e) {
+    console.warn('Antivirus summary error:', e);
+  }
+}
+
+/** Carga todos los resultados de escaneo y pobla la tabla */
+async function loadAntivirusResults() {
+  try {
+    const BASE = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:8080';
+    const res  = await fetch(`${BASE}/api/antivirus/results?limit=200`);
+    const json = await res.json();
+    _avResultsCache = json.data || [];
+    renderAntivirusTable(_avResultsCache);
+  } catch (e) {
+    console.warn('Antivirus results error:', e);
+    const tbody = document.getElementById('av-devices-tbody');
+    if (tbody) tbody.innerHTML = `
+      <tr><td colspan="10" class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div>Gateway no disponible o endpoint /api/antivirus/results no responde</div>
+      </td></tr>`;
+  }
+}
+
+/** Renderiza la tabla de dispositivos con resultados de escaneo */
+function renderAntivirusTable(results) {
+  const tbody = document.getElementById('av-devices-tbody');
+  const count = document.getElementById('av-table-count');
+  if (!tbody) return;
+
+  if (count) count.textContent = `${results.length} dispositivo${results.length !== 1 ? 's' : ''}`;
+
+  if (!results.length) {
+    tbody.innerHTML = `
+      <tr><td colspan="10" class="empty-state">
+        <div class="empty-icon">🛡️</div>
+        <div>Ningún dispositivo ha reportado resultados de escaneo aún.</div>
+        <div style="font-size:12px;margin-top:8px;opacity:.6">
+          Instala ClamAV en los endpoints usando el botón <strong>Instalar en Endpoint</strong>
+        </div>
+      </td></tr>`;
+    return;
+  }
+
+  const statusBadge = (s) => {
+    const map = {
+      CLEAN:    { icon: '🟢', label: 'Limpio',    cls: 'av-badge-clean' },
+      INFECTED: { icon: '🔴', label: 'Infectado', cls: 'av-badge-infected' },
+      ERROR:    { icon: '🟠', label: 'Error',      cls: 'av-badge-error' },
+      PENDING:  { icon: '🟡', label: 'Pendiente', cls: 'av-badge-pending' },
+    };
+    const m = map[s?.toUpperCase()] || map.PENDING;
+    return `<span class="av-status-badge ${m.cls}">${m.icon} ${m.label}</span>`;
+  };
+
+  const fmtDate = (ts) => {
+    if (!ts) return '—';
+    try { return new Date(ts).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }); }
+    catch { return ts; }
+  };
+
+  const shortUUID = (uuid) => uuid ? uuid.substring(0, 8) + '…' : '—';
+
+  const rows = results.map((r, i) => {
+    const infected   = parseInt(r.infected_count || 0);
+    const infectedCls = infected > 0 ? 'av-row-infected' : '';
+    const txLink     = r.blockchain_tx
+      ? `<a href="#" class="av-tx-link" title="${r.blockchain_tx}" onclick="return false;">
+           ⛓️ ${r.blockchain_tx.slice(0, 8)}…
+         </a>`
+      : '<span class="av-tx-none">—</span>';
+
+    const detailBtn = infected > 0
+      ? `<button class="av-detail-btn" onclick="window.showAvDetail(${i})">Ver ${infected} amenaza${infected > 1 ? 's' : ''}</button>`
+      : '<span style="opacity:.4">—</span>';
+
+    return `
+      <tr class="${infectedCls}" data-av-hostname="${r.hostname?.toLowerCase() || ''}"
+          data-av-uuid="${r.device_uuid?.toLowerCase() || ''}"
+          data-av-status="${r.status?.toUpperCase() || 'PENDING'}"
+          data-av-mode="${r.scan_mode || 'Daily'}">
+        <td>${statusBadge(r.status)}</td>
+        <td class="av-hostname">${r.hostname || '—'}</td>
+        <td class="av-uuid" title="${r.device_uuid || ''}">${shortUUID(r.device_uuid)}</td>
+        <td><span class="av-mode-badge av-mode-${(r.scan_mode||'Daily').toLowerCase()}">${r.scan_mode || 'Daily'}</span></td>
+        <td class="av-num">${(r.scanned_files || 0).toLocaleString()}</td>
+        <td class="av-num ${infected > 0 ? 'av-infected-count' : ''}">${infected > 0 ? `🦠 ${infected}` : '0'}</td>
+        <td class="av-ts">${fmtDate(r.timestamp)}</td>
+        <td class="av-engine">${(r.scanner || 'ClamAV').replace('ClamAV ', 'v')}</td>
+        <td>${txLink}</td>
+        <td>${detailBtn}</td>
+      </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+}
+
+/** Filtra la tabla por búsqueda y dropdowns de estado/modo */
+window.filterAntivirusTable = function(searchVal) {
+  const search = (searchVal || document.getElementById('av-search')?.value || '').toLowerCase();
+  const status = document.getElementById('av-filter-status')?.value || '';
+  const mode   = document.getElementById('av-filter-mode')?.value   || '';
+
+  const filtered = _avResultsCache.filter(r => {
+    const matchSearch = !search ||
+      (r.hostname || '').toLowerCase().includes(search) ||
+      (r.device_uuid || '').toLowerCase().includes(search);
+    const matchStatus = !status || (r.status || '').toUpperCase() === status.toUpperCase();
+    const matchMode   = !mode   || (r.scan_mode || '') === mode;
+    return matchSearch && matchStatus && matchMode;
+  });
+
+  renderAntivirusTable(filtered);
+};
+
+/** Muestra el modal de detalle de amenazas para un dispositivo */
+window.showAvDetail = function(idx) {
+  // Reconstruir el índice filtrando según filtros activos
+  const search = (document.getElementById('av-search')?.value || '').toLowerCase();
+  const status = document.getElementById('av-filter-status')?.value || '';
+  const mode   = document.getElementById('av-filter-mode')?.value   || '';
+  const filtered = _avResultsCache.filter(r => {
+    const ms = !search || (r.hostname||'').toLowerCase().includes(search) || (r.device_uuid||'').toLowerCase().includes(search);
+    const mst = !status || (r.status||'').toUpperCase() === status.toUpperCase();
+    const mm  = !mode   || (r.scan_mode||'') === mode;
+    return ms && mst && mm;
+  });
+
+  const r = filtered[idx];
+  if (!r) return;
+
+  const modal = document.getElementById('av-detail-modal');
+  const title = document.getElementById('av-modal-title');
+  const body  = document.getElementById('av-modal-body');
+
+  if (title) title.textContent = `🦠 Amenazas en ${r.hostname} — ${new Date(r.timestamp).toLocaleString('es-AR')}`;
+
+  const files = r.infected_files || [];
+  if (body) {
+    body.innerHTML = `
+      <div class="av-detail-meta">
+        <div><strong>Dispositivo:</strong> ${r.hostname}</div>
+        <div><strong>UUID:</strong> ${r.device_uuid || '—'}</div>
+        <div><strong>Motor:</strong> ${r.scanner || 'ClamAV'}</div>
+        <div><strong>Firmas:</strong> ${r.definitions_date || '—'}</div>
+        <div><strong>Duración:</strong> ${r.scan_duration_s ? r.scan_duration_s + 's' : '—'}</div>
+        <div><strong>Paths:</strong> ${(r.scan_paths || []).join(', ') || '—'}</div>
+      </div>
+      <div class="av-threats-list">
+        <div class="av-threats-header">🔴 ${files.length} archivo${files.length !== 1 ? 's' : ''} infectado${files.length !== 1 ? 's' : ''}:</div>
+        ${files.map(f => `<div class="av-threat-item">🦠 <code>${f}</code></div>`).join('')}
+      </div>
+      ${r.blockchain_tx ? `<div class="av-bc-info">⛓️ Registrado en Blockchain: <code>${r.blockchain_tx}</code></div>` : ''}
+    `;
+  }
+
+  if (modal) modal.style.display = 'flex';
+};
+
+/** Muestra el modal de guía de instalación de ClamAV */
+window.showClamavInstallGuide = function() {
+  const modal = document.getElementById('av-install-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+/** Copia el comando de instalación al portapapeles */
+window.copyInstallCmd = function() {
+  const cmd = document.getElementById('av-install-cmd')?.textContent || '';
+  navigator.clipboard?.writeText(cmd).then(() => {
+    toast('Comando copiado al portapapeles', 'success');
+  });
+};
+
+/** Actualiza manualmente la vista antivirus */
+window.refreshAntivirusView = function() {
+  loadAntivirusView();
+};
+
+// Auto-polling antivirus cada 60 segundos si la vista está activa
+setInterval(() => {
+  const avView = document.getElementById('view-antivirus');
+  if (avView?.classList.contains('active')) {
+    loadAntivirusView();
+  }
+}, 60_000);
+
+

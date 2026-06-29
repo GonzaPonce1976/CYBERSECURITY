@@ -9,6 +9,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 
 use crate::models::alert::Alert;
+use crate::models::antivirus::AntivirusScanResult;
 use crate::clients::{
     abuseipdb::AbuseIpDbClient,
     greynoise::GreyNoiseClient,
@@ -32,6 +33,9 @@ fn valid_api_key(key: &str) -> bool {
 pub struct AppState {
     /// Cache de alertas recientes (id → alerta)
     pub alerts_cache: DashMap<String, Alert>,
+
+    /// Cache de resultados antivirus (hostname:mode → resultado más reciente)
+    pub antivirus_cache: DashMap<String, AntivirusScanResult>,
 
     /// Cache de reputación de IPs (ip → datos)
     pub ip_cache: DashMap<String, serde_json::Value>,
@@ -202,6 +206,7 @@ impl AppState {
 
         let mut state = Self {
             alerts_cache: DashMap::new(),
+            antivirus_cache: DashMap::new(),
             ip_cache: DashMap::new(),
             cve_cache: DashMap::new(),
             db_pool,
@@ -287,6 +292,23 @@ impl AppState {
             )",
             [],
         )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS antivirus_scans (
+                id TEXT PRIMARY KEY,
+                hostname TEXT NOT NULL,
+                device_uuid TEXT NOT NULL,
+                data TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Índice para búsquedas por hostname
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_antivirus_hostname ON antivirus_scans (hostname)",
+            [],
+        );
 
         Ok(())
     }

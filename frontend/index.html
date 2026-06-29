@@ -29,6 +29,7 @@
           <button class="nav-btn" data-view="audit" id="nav-audit">Audit Trail</button>
           <button class="nav-btn" data-view="arcat" id="nav-arcat">🏛️ ARCAT Blockchain</button>
           <button class="nav-btn" data-view="ioc" id="nav-ioc">🦠 IoC Intel</button>
+          <button class="nav-btn" data-view="antivirus" id="nav-antivirus">🛡️ Antivirus</button>
           <button class="nav-btn" data-view="servicios" id="nav-servicios">⚙ Servicios</button>
         </nav>
         <div class="navbar-actions">
@@ -583,6 +584,153 @@
             </div>
           </div>
         </div>
+
+      <!-- ── ANTIVIRUS VIEW ──────────────────────────────────────────── -->
+      <div class="view" id="view-antivirus">
+        <div class="view-header">
+          <div class="view-title">
+            <span class="view-icon">🛡️</span>
+            <div>
+              <h1 class="view-headline">Protección Antivirus — ClamAV</h1>
+              <p class="view-subtitle">Monitoreo centralizado de escaneos ClamAV en todos los endpoints</p>
+            </div>
+          </div>
+          <div class="view-actions">
+            <button class="btn-secondary" id="av-refresh-btn" onclick="window.refreshAntivirusView()">
+              🔄 Actualizar
+            </button>
+            <button class="btn-primary" id="av-install-btn" onclick="window.showClamavInstallGuide()">
+              ➕ Instalar en Endpoint
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="av-kpi-grid" id="av-kpi-grid">
+          <div class="av-kpi-card av-kpi-total">
+            <div class="av-kpi-icon">💻</div>
+            <div class="av-kpi-label">Dispositivos</div>
+            <div class="av-kpi-value" id="av-kpi-total">--</div>
+            <div class="av-kpi-sub">con ClamAV activo</div>
+          </div>
+          <div class="av-kpi-card av-kpi-clean">
+            <div class="av-kpi-icon">✅</div>
+            <div class="av-kpi-label">Limpios</div>
+            <div class="av-kpi-value" id="av-kpi-clean">--</div>
+            <div class="av-kpi-sub">sin amenazas</div>
+          </div>
+          <div class="av-kpi-card av-kpi-infected">
+            <div class="av-kpi-icon">🧫</div>
+            <div class="av-kpi-label">Infectados</div>
+            <div class="av-kpi-value" id="av-kpi-infected">--</div>
+            <div class="av-kpi-sub">requieren atención</div>
+          </div>
+          <div class="av-kpi-card av-kpi-error">
+            <div class="av-kpi-icon">⚠️</div>
+            <div class="av-kpi-label">Error/Pendiente</div>
+            <div class="av-kpi-value" id="av-kpi-error">--</div>
+            <div class="av-kpi-sub">sin datos recientes</div>
+          </div>
+          <div class="av-kpi-card av-kpi-threats">
+            <div class="av-kpi-icon">💀</div>
+            <div class="av-kpi-label">Amenazas</div>
+            <div class="av-kpi-value" id="av-kpi-threats">--</div>
+            <div class="av-kpi-sub">archivos infectados</div>
+          </div>
+        </div>
+
+        <!-- Filtros y busqueda -->
+        <div class="av-controls">
+          <input type="text" id="av-search" placeholder="🔍 Buscar hostname o UUID..." class="av-search-input"
+                 oninput="window.filterAntivirusTable(this.value)" />
+          <select id="av-filter-status" class="av-filter-select" onchange="window.filterAntivirusTable()">
+            <option value="">Todos los estados</option>
+            <option value="CLEAN">🟢 Limpios</option>
+            <option value="INFECTED">🔴 Infectados</option>
+            <option value="ERROR">🟠 Error</option>
+            <option value="PENDING">🟡 Pendientes</option>
+          </select>
+          <select id="av-filter-mode" class="av-filter-select" onchange="window.filterAntivirusTable()">
+            <option value="">Todos los modos</option>
+            <option value="Daily">Diario</option>
+            <option value="Weekly">Semanal</option>
+          </select>
+          <span class="av-last-updated" id="av-last-updated">Actualizando...</span>
+        </div>
+
+        <!-- Tabla de dispositivos -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📊 Dispositivos Monitoreados</span>
+            <span class="badge" id="av-table-count">0 dispositivos</span>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="av-devices-table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Hostname</th>
+                  <th>UUID</th>
+                  <th>Modo</th>
+                  <th>Archivos Escanea</th>
+                  <th>Infectados</th>
+                  <th>Último Escaneo</th>
+                  <th>Motor</th>
+                  <th>Blockchain</th>
+                  <th>Detalles</th>
+                </tr>
+              </thead>
+              <tbody id="av-devices-tbody">
+                <tr>
+                  <td colspan="10" class="empty-state">
+                    <div class="empty-icon">🛡️</div>
+                    <div>Cargando datos de escaneo antivirus...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Modal detalle infeccion -->
+        <div class="av-modal" id="av-detail-modal" style="display:none">
+          <div class="av-modal-content">
+            <div class="av-modal-header">
+              <h3 id="av-modal-title">🧫 Detalle de Amenazas</h3>
+              <button class="av-modal-close" onclick="document.getElementById('av-detail-modal').style.display='none'">×</button>
+            </div>
+            <div class="av-modal-body" id="av-modal-body">
+              <!-- poblado dinámicamente -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Guia de instalacion -->
+        <div class="av-modal" id="av-install-modal" style="display:none">
+          <div class="av-modal-content av-modal-wide">
+            <div class="av-modal-header">
+              <h3>📦 Instalar ClamAV en Endpoint</h3>
+              <button class="av-modal-close" onclick="document.getElementById('av-install-modal').style.display='none'">×</button>
+            </div>
+            <div class="av-modal-body">
+              <p class="av-install-subtitle">Ejecutar en el endpoint Windows como <strong>Administrador</strong>:</p>
+              <div class="av-code-block">
+                <code id="av-install-cmd">powershell -ExecutionPolicy Bypass -File "C:\Program Files\CybersecGateway\install_clamav.ps1"</code>
+                <button class="av-copy-btn" onclick="window.copyInstallCmd()">Copiar</button>
+              </div>
+              <div class="av-install-steps">
+                <div class="av-step"><span class="av-step-num">1</span>El script descarga ClamAV e instala silenciosamente</div>
+                <div class="av-step"><span class="av-step-num">2</span>Configura actualización de firmas cada 4 horas</div>
+                <div class="av-step"><span class="av-step-num">3</span>Registra tarea diaria (02:00 AM) para C:\Users + C:\Windows\Temp</div>
+                <div class="av-step"><span class="av-step-num">4</span>Registra tarea semanal (Sábados 03:00 AM) para C:\Program Files</div>
+                <div class="av-step"><span class="av-step-num">5</span>Los resultados se reportan automáticamente a este dashboard</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- fin view-antivirus -->
 
       </main>
 
