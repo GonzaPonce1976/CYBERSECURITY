@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <Product Id="*"
+           Name="Cybersec Antivirus Agent"
+           Language="1033"
+           Codepage="65001"
+           Version="1.0.0"
+           Manufacturer="Cybersecurity DApp"
+           UpgradeCode="4f2e8f5f-0d10-4f5e-9d8f-0c600f4c9c2c">
+
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Platform="x64"
+             Description="CyberSecurity DApp - ClamAV Antivirus Agent &amp; Reporting"
+             Comments="Instala ClamAV, configura tareas de escaneo diario/semanal y reporta al Gateway." />
+
+    <Media Id="1" Cabinet="antivirus.cab" EmbedCab="yes" />
+
+    <MajorUpgrade DowngradeErrorMessage="Ya existe una versión más reciente de Cybersec Antivirus Agent instalada." />
+
+    <!-- Propiedades configurables -->
+    <Property Id="GATEWAY_IP" Value="192.168.125.250" />
+
+    <!-- Estructura de directorios -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="CybersecGateway" />
+      </Directory>
+    </Directory>
+
+    <!-- Componentes (Scripts de PowerShell) -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="AntivirusScriptsComponent" Guid="e24a2386-6ef9-4c45-8f3d-f8f2b96c3a25" Win64="yes">
+        <!-- Copiar install_clamav.ps1 -->
+        <File Id="InstallClamavPs1"
+              Source="install_clamav.ps1"
+              KeyPath="yes" />
+        <!-- Copiar scan_and_report.ps1 -->
+        <File Id="ScanAndReportPs1"
+              Source="scan_and_report.ps1" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Acciones Personalizadas (Custom Actions) para ejecutar el instalador ClamAV con privilegios SYSTEM -->
+    <!-- Definición de la propiedad de la acción diferida (requerido para acceder a propiedades en Deferred) -->
+    <CustomAction Id="SetRunInstallerCmdProperty"
+                  Property="RunClamavInstaller"
+                  Value="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]install_clamav.ps1&quot; -GatewayIp [GATEWAY_IP] -SkipAdminCheck" />
+
+    <!-- Ejecución de la acción en modo Diferido con privilegios elevados (Impersonate=no) -->
+    <CustomAction Id="RunClamavInstaller"
+                  BinaryKey="WixCA"
+                  DllEntry="CAQuietExec64"
+                  Execute="deferred"
+                  Return="check"
+                  Impersonate="no" />
+
+    <!-- Secuencia de instalación -->
+    <InstallExecuteSequence>
+      <!-- Configurar la propiedad de comando antes del paso diferido -->
+      <Custom Action="SetRunInstallerCmdProperty" Before="RunClamavInstaller">NOT Installed</Custom>
+      <!-- Correr el instalador durante la instalación -->
+      <Custom Action="RunClamavInstaller" After="InstallFiles">NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+    <!-- Habilitar componentes mínimos -->
+    <Feature Id="ProductFeature" Title="Cybersec Antivirus Agent" Level="1">
+      <ComponentRef Id="AntivirusScriptsComponent" />
+    </Feature>
+
+    <!-- Interfaz de usuario básica del instalador -->
+    <UIRef Id="WixUI_Minimal" />
+
+  </Product>
+</Wix>
