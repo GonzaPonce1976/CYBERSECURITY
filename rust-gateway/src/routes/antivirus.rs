@@ -11,9 +11,10 @@
 
 use axum::{
     extract::{Path, Query, State},
-    response::Json,
+    response::{Json, IntoResponse, Response},
     routing::{get, post},
     Router,
+    http::{header, StatusCode},
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -29,6 +30,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/results",             get(list_results))
         .route("/results/{hostname}",  get(results_by_hostname))
         .route("/summary",             get(get_summary))
+        .route("/download-installer",  get(download_installer))
 }
 
 // ─── Query params ──────────────────────────────────────────────────────────────
@@ -400,5 +402,27 @@ async fn register_malware_on_chain(
 
     let tx_hash: alloy::primitives::B256 = *tx_builder.tx_hash();
     Ok(format!("{}", tx_hash))
+}
+
+/// Sirve el instalador MSI para que el usuario pueda descargarlo directamente desde el dashboard
+async fn download_installer() -> impl IntoResponse {
+    let file_path = "packages/windows/cybersec-antivirus-agent.msi";
+    match std::fs::read(file_path) {
+        Ok(bytes) => {
+            Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/octet-stream")
+                .header(header::CONTENT_DISPOSITION, "attachment; filename=\"cybersec-antivirus-agent.msi\"")
+                .body(axum::body::Body::from(bytes))
+                .unwrap()
+        }
+        Err(err) => {
+            error!("Error leyendo MSI para descarga: {:?}", err);
+            Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(axum::body::Body::from("Instalador MSI no encontrado. Asegurese de compilarlo antes."))
+                .unwrap()
+        }
+    }
 }
 
