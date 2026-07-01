@@ -498,7 +498,6 @@ foreach ($p in $ValidPaths) {
 $ScanArgs += "--recursive"
 $ScanArgs += "--infected"
 $ScanArgs += "--log=`"$ScanLog`""
-$ScanArgs += "--no-summary"
 $ScanArgs += "--max-filesize=25M"
 $ScanArgs += "--max-scansize=100M"
 foreach ($ex in $ExcludeDirs) {
@@ -557,13 +556,14 @@ if (Test-Path $ScanLog) {
     # Limpiar log temporal
     try { Remove-Item $ScanLog -Force -ErrorAction SilentlyContinue } catch {}
 }
-
+$ErrorMessage = $null
 if ($ExitCode -eq 1 -or $InfectedCount -gt 0) {
     $ScanStatus = "INFECTED"
     Write-Log "SE DETECTARON AMENAZAS: $InfectedCount archivos infectados" "WARN"
     foreach ($f in $InfectedFiles) { Write-Log "   AMENAZA: $f" "WARN" }
 } elseif ($ExitCode -ge 2) {
     $ScanStatus = "ERROR"
+    $ErrorMessage = "ClamAV exit code $ExitCode. StdErr: $StdErr"
     Write-Log "Error durante el escaneo (Exit Code: $ExitCode). StdErr: $StdErr" "ERROR"
 } else {
     Write-Log "Sin amenazas detectadas. Estado: CLEAN"
@@ -595,6 +595,7 @@ $ScanPayload = @{
     scan_duration_s  = [int]$ScanDuration
     scan_paths       = $ValidPaths
     os_caption       = $OsCaption
+    error_message    = $ErrorMessage
     timestamp        = (Get-Date -Format "o")
 }
 

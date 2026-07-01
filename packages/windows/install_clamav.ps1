@@ -445,6 +445,18 @@ try {
 }
 
 # ============================================================
+# REPORTE INICIAL AUTOMÁTICO (Self-Test)
+# ============================================================
+Write-Log "Ejecutando autodiagnostico inicial (-SelfTest) para autoregistro en el Dashboard..."
+try {
+    $SelfTestArgs = "-GatewayIp `"$GatewayIp`" -SelfTest -SkipAdminCheck"
+    $ProcSelfTest = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" $SelfTestArgs" -Wait -NoNewWindow -PassThru
+    Write-Log "Autodiagnostico completado con codigo de salida: $($ProcSelfTest.ExitCode)"
+} catch {
+    Write-Log "No se pudo ejecutar el autodiagnostico de forma automatica: $_" "WARN"
+}
+
+# ============================================================
 # RESUMEN FINAL
 # ============================================================
 Write-Log "===================================================="
