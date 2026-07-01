@@ -2055,7 +2055,7 @@ async function loadAntivirusResults() {
     const res  = await fetch(`${BASE}/api/antivirus/results?limit=200`);
     const json = await res.json();
     _avResultsCache = json.data || [];
-    renderAntivirusTable(_avResultsCache);
+    await renderAntivirusTable(_avResultsCache);
   } catch (e) {
     console.warn('Antivirus results error:', e);
     const tbody = document.getElementById('av-devices-tbody');
@@ -2068,7 +2068,7 @@ async function loadAntivirusResults() {
 }
 
 /** Renderiza la tabla de dispositivos con resultados de escaneo */
-function renderAntivirusTable(results) {
+async function renderAntivirusTable(results) {
   const tbody = document.getElementById('av-devices-tbody');
   const count = document.getElementById('av-table-count');
   if (!tbody) return;
@@ -2085,6 +2085,29 @@ function renderAntivirusTable(results) {
         </div>
       </td></tr>`;
     return;
+  }
+
+  // Instanciar el contrato de la Registry global para búsquedas de UUID
+  let registryContract = null;
+  try {
+    const activeSigner = getSigner();
+    let providerOrSigner = activeSigner;
+    if (!providerOrSigner && window.ethereum) {
+      const { BrowserProvider } = await import('ethers');
+      providerOrSigner = new BrowserProvider(window.ethereum);
+    }
+    if (providerOrSigner) {
+      const { Contract } = await import('ethers');
+      const overview = await api.getArcatOverview();
+      const registryAddr = overview?.arcat?.arcat_registry;
+      if (registryAddr && registryAddr !== "0x0000000000000000000000000000000000000000") {
+        registryContract = new Contract(registryAddr, [
+          "function lookupByUUID(string uuid) external view returns (address uoContract, uint256 tokenId, bool found)"
+        ], providerOrSigner);
+      }
+    }
+  } catch (e) {
+    console.warn("No se pudo conectar a ArcatRegistry para lookup en tabla antivirus:", e);
   }
 
   const statusBadge = (s) => {
@@ -2106,14 +2129,27 @@ function renderAntivirusTable(results) {
 
   const shortUUID = (uuid) => uuid ? uuid.substring(0, 8) + '…' : '—';
 
-  const rows = results.map((r, i) => {
+  const rows = await Promise.all(results.map(async (r, i) => {
     const infected   = parseInt(r.infected_count || 0);
     const infectedCls = infected > 0 ? 'av-row-infected' : '';
-    const txLink     = r.blockchain_tx
-      ? `<a href="#" class="av-tx-link" title="${r.blockchain_tx}" onclick="return false;">
-           ⛓️ ${r.blockchain_tx.slice(0, 8)}…
-         </a>`
-      : '<span class="av-tx-none">—</span>';
+    
+    let txLink = '<span class="av-tx-none">—</span>';
+    if (r.blockchain_tx) {
+      txLink = `<a href="#" class="av-tx-link" title="${r.blockchain_tx}" onclick="return false;">
+                  ⛓️ ${r.blockchain_tx.slice(0, 8)}…
+                </a>`;
+    } else if (registryContract && r.device_uuid) {
+      try {
+        const [uoContract, tokenId, found] = await registryContract.lookupByUUID(r.device_uuid);
+        if (found) {
+          txLink = `<span class="av-sbt-badge" title="SBT Acuñado - Contrato UO: ${uoContract} (Token #${tokenId})" style="cursor:help; background:linear-gradient(135deg, #4f46e5, #4338ca); color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block; border:1px solid #6366f1;">
+                      🏛️ SBT #${tokenId}
+                    </span>`;
+        }
+      } catch (err) {
+        console.warn(`Error lookupByUUID para ${r.device_uuid}:`, err);
+      }
+    }
 
     const detailBtn = infected > 0
       ? `<button class="av-detail-btn" onclick="window.showAvDetail(${i})">Ver ${infected} amenaza${infected > 1 ? 's' : ''}</button>`
@@ -2131,17 +2167,17 @@ function renderAntivirusTable(results) {
         <td class="av-num">${(r.scanned_files || 0).toLocaleString()}</td>
         <td class="av-num ${infected > 0 ? 'av-infected-count' : ''}">${infected > 0 ? `🦠 ${infected}` : '0'}</td>
         <td class="av-ts">${fmtDate(r.timestamp)}</td>
-        <td class="av-engine">${(r.scanner || 'ClamAV').replace('ClamAV ', 'v')}</td>
-        <td>${txLink}</td>
+        <td class="av-engine" style="text-align: center;">${(r.scanner || 'ClamAV').replace('ClamAV ', 'v')}</td>
+        <td style="text-align: center;">${txLink}</td>
         <td>${detailBtn}</td>
       </tr>`;
-  });
+  }));
 
   tbody.innerHTML = rows.join('');
 }
 
 /** Filtra la tabla por búsqueda y dropdowns de estado/modo */
-window.filterAntivirusTable = function(searchVal) {
+window.filterAntivirusTable = async function(searchVal) {
   const search = (searchVal || document.getElementById('av-search')?.value || '').toLowerCase();
   const status = document.getElementById('av-filter-status')?.value || '';
   const mode   = document.getElementById('av-filter-mode')?.value   || '';
@@ -2155,7 +2191,7 @@ window.filterAntivirusTable = function(searchVal) {
     return matchSearch && matchStatus && matchMode;
   });
 
-  renderAntivirusTable(filtered);
+  await renderAntivirusTable(filtered);
 };
 
 /** Muestra el modal de detalle de amenazas para un dispositivo */
