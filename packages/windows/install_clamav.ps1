@@ -368,6 +368,9 @@ function Register-CyberSecTask {
     try {
         $schedule = if ($TaskName -like "*Weekly*") { "WEEKLY /D SAT /ST 03:00" } `
                     elseif ($TaskName -like "*Update*") { "HOURLY /MO 4" } `
+                    elseif ($TaskName -like "*0330*") { "DAILY /ST 03:30" } `
+                    elseif ($TaskName -like "*1300*") { "DAILY /ST 13:00" } `
+                    elseif ($TaskName -like "*1830*") { "DAILY /ST 18:30" } `
                     else { "DAILY /ST 02:00" }
         
         $schtasksArgs = "/Create /TN `"$TaskName`" /SC $schedule /TR `"powershell.exe $Arguments`" /RU SYSTEM /RL HIGHEST /F"
@@ -399,16 +402,44 @@ try {
 
 $BaseArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" -GatewayIp `"$GatewayIp`""
 
-Write-Log "Registrando tarea: Escaneo DIARIO (02:00 AM)..."
+Write-Log "Registrando tarea: Escaneo DIARIO (03:30 AM)..."
 try {
-    $DailyTrigger = New-ScheduledTaskTrigger -Daily -At "02:00AM"
-    Register-CyberSecTask -TaskName "CyberSec_ClamAV_DailyScan" `
-        -Description "CyberSec DApp - Escaneo antivirus diario (Escritorio/Descargas/Documentos + Temp)" `
+    $DailyTrigger1 = New-ScheduledTaskTrigger -Daily -At "03:30AM"
+    Register-CyberSecTask -TaskName "CyberSec_ClamAV_DailyScan_0330" `
+        -Description "CyberSec DApp - Escaneo antivirus diario (03:30 AM)" `
         -Arguments "$BaseArgs -ScanMode Daily" `
-        -Trigger $DailyTrigger -Principal $Principal -Settings $Settings
+        -Trigger $DailyTrigger1 -Principal $Principal -Settings $Settings
 } catch {
-    Write-Log "WARN registrando tarea diaria: $_" "WARN"
-    & schtasks.exe /Create /TN "CyberSec_ClamAV_DailyScan" /SC DAILY /ST 02:00 `
+    Write-Log "WARN registrando tarea diaria 03:30: $_" "WARN"
+    & schtasks.exe /Create /TN "CyberSec_ClamAV_DailyScan_0330" /SC DAILY /ST 03:30 `
+        /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" -GatewayIp `"$GatewayIp`" -ScanMode Daily" `
+        /RU SYSTEM /RL HIGHEST /F 2>&1 | ForEach-Object { Write-Log $_ }
+}
+
+Write-Log "Registrando tarea: Escaneo DIARIO (01:00 PM / 13:00)..."
+try {
+    $DailyTrigger2 = New-ScheduledTaskTrigger -Daily -At "01:00PM"
+    Register-CyberSecTask -TaskName "CyberSec_ClamAV_DailyScan_1300" `
+        -Description "CyberSec DApp - Escaneo antivirus diario (13:00 PM)" `
+        -Arguments "$BaseArgs -ScanMode Daily" `
+        -Trigger $DailyTrigger2 -Principal $Principal -Settings $Settings
+} catch {
+    Write-Log "WARN registrando tarea diaria 13:00: $_" "WARN"
+    & schtasks.exe /Create /TN "CyberSec_ClamAV_DailyScan_1300" /SC DAILY /ST 13:00 `
+        /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" -GatewayIp `"$GatewayIp`" -ScanMode Daily" `
+        /RU SYSTEM /RL HIGHEST /F 2>&1 | ForEach-Object { Write-Log $_ }
+}
+
+Write-Log "Registrando tarea: Escaneo DIARIO (06:30 PM / 18:30)..."
+try {
+    $DailyTrigger3 = New-ScheduledTaskTrigger -Daily -At "06:30PM"
+    Register-CyberSecTask -TaskName "CyberSec_ClamAV_DailyScan_1830" `
+        -Description "CyberSec DApp - Escaneo antivirus diario (18:30 PM)" `
+        -Arguments "$BaseArgs -ScanMode Daily" `
+        -Trigger $DailyTrigger3 -Principal $Principal -Settings $Settings
+} catch {
+    Write-Log "WARN registrando tarea diaria 18:30: $_" "WARN"
+    & schtasks.exe /Create /TN "CyberSec_ClamAV_DailyScan_1830" /SC DAILY /ST 18:30 `
         /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" -GatewayIp `"$GatewayIp`" -ScanMode Daily" `
         /RU SYSTEM /RL HIGHEST /F 2>&1 | ForEach-Object { Write-Log $_ }
 }
@@ -445,7 +476,7 @@ try {
 }
 
 # ============================================================
-# REPORTE INICIAL AUTOMÁTICO (Self-Test)
+# REPORTE INICIAL AUTOMÁTICO (Self-Test + Escaneo Inicial Asíncrono)
 # ============================================================
 Write-Log "Ejecutando autodiagnostico inicial (-SelfTest) para autoregistro en el Dashboard..."
 try {
@@ -456,6 +487,15 @@ try {
     Write-Log "No se pudo ejecutar el autodiagnostico de forma automatica: $_" "WARN"
 }
 
+Write-Log "Lanzando primer escaneo real en segundo plano (asincrono)..."
+try {
+    $ScanArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScanScript`" -GatewayIp `"$GatewayIp`" -ScanMode Daily -SkipAdminCheck"
+    Start-Process -FilePath "powershell.exe" -ArgumentList $ScanArgs -NoNewWindow
+    Write-Log "Primer escaneo en segundo plano iniciado con exito."
+} catch {
+    Write-Log "No se pudo lanzar el primer escaneo en segundo plano: $_" "WARN"
+}
+
 # ============================================================
 # RESUMEN FINAL
 # ============================================================
@@ -464,13 +504,13 @@ Write-Log "Instalacion y configuracion de ClamAV completada"
 Write-Log "   SO detectado: $OsCaption"
 Write-Log "   Ejecutable: $ClamScan"
 Write-Log "   Firmas en: $DatabaseDir"
-Write-Log "   Escaneo diario: 02:00 AM (Escritorio/Descargas/Documentos)"
+Write-Log "   Escaneos diarios: 03:30 AM, 13:00 PM, 18:30 PM"
 Write-Log "   Escaneo semanal: Sabados 03:00 AM (C:\Program Files)"
 Write-Log "   Actualizacion firmas: cada 4 horas"
 Write-Log "   Gateway: http://${GatewayIp}:8080"
 Write-Log "   Log instalacion: $LogFile"
 Write-Log "===================================================="
-Write-Log "SIGUIENTE PASO: Ejecutar scan_and_report.ps1 -SelfTest para verificar"
+Write-Log "SIGUIENTE PASO: Verificar autoregistro en el Dashboard"
 
 # Pausar si se ejecuta de forma interactiva (clic derecho) para que no se cierre la consola inmediatamente
 if ([Environment]::UserInteractive -and $env:CLAMAV_SKIP_ELEVATION -ne "1" -and -not $SkipAdminCheck) {
