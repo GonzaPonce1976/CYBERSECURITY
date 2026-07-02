@@ -2238,13 +2238,13 @@ window.showAvDetail = function(idx) {
   if (modal) modal.style.display = 'flex';
 };
 
-/** Descarga el instalador MSI cybersec-antivirus-agent.msi desde el Gateway */
+/** Descarga el instalador MSI cybersec-gateway-network.msi desde el Gateway */
 window.downloadAntivirusMsi = function() {
   const BASE = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:8080';
   const url = `${BASE}/api/antivirus/download-installer`;
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'cybersec-antivirus-agent.msi';
+  a.download = 'cybersec-gateway-network.msi';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

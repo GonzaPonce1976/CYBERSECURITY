@@ -599,7 +599,7 @@
             <button class="btn-secondary" id="av-refresh-btn" onclick="window.refreshAntivirusView()">
               🔄 Actualizar
             </button>
-            <button class="btn-primary" id="av-install-btn" onclick="window.downloadAntivirusMsi()">
+            <button class="btn-primary" id="av-install-btn" onclick="window.showClamavInstallGuide()">
               ➕ Instalar en Endpoint
             </button>
           </div>
@@ -713,17 +713,43 @@
               <button class="av-modal-close" onclick="document.getElementById('av-install-modal').style.display='none'">×</button>
             </div>
             <div class="av-modal-body">
-              <p class="av-install-subtitle">Ejecutar en el endpoint Windows como <strong>Administrador</strong>:</p>
-              <div class="av-code-block">
-                <code id="av-install-cmd">powershell -ExecutionPolicy Bypass -File "C:\Program Files\CybersecGateway\install_clamav.ps1"</code>
-                <button class="av-copy-btn" onclick="window.copyInstallCmd()">Copiar</button>
+              <p class="av-install-subtitle" style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Ejecutar para versiones de Windows 10 -11 - Server</p>
+              
+              <div class="av-download-container" style="margin-bottom: 20px; display: flex; justify-content: center;">
+                <button class="btn-primary" style="height: 48px; min-height: 48px; width: 100%; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; background: var(--cyan); color: #0a0e1a; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px;" onclick="window.downloadAntivirusMsi()">
+                  📥 Descargar
+                </button>
               </div>
+
               <div class="av-install-steps">
-                <div class="av-step"><span class="av-step-num">1</span>El script descarga ClamAV e instala silenciosamente</div>
-                <div class="av-step"><span class="av-step-num">2</span>Configura actualización de firmas cada 4 horas</div>
-                <div class="av-step"><span class="av-step-num">3</span>Registra tarea diaria (02:00 AM) para C:\Users + C:\Windows\Temp</div>
-                <div class="av-step"><span class="av-step-num">4</span>Registra tarea semanal (Sábados 03:00 AM) para C:\Program Files</div>
-                <div class="av-step"><span class="av-step-num">5</span>Los resultados se reportan automáticamente a este dashboard</div>
+                <div class="av-step">
+                  <span class="av-step-num">1</span>
+                  El instalador MSI guía la instalación interactiva y solicita permisos UAC
+                </div>
+                <div class="av-step">
+                  <span class="av-step-num">2</span>
+                  Configura actualización de firmas cada 4 horas
+                </div>
+                <div class="av-step">
+                  <span class="av-step-num">3</span>
+                  <div>
+                    <strong>Cronograma de Escaneo Programado:</strong>
+                    <ul style="margin-left: 20px; margin-top: 4px; list-style-type: disc;">
+                      <li>Al instalarse: Ejecuta diagnóstico rápido + escaneo asíncrono inicial</li>
+                      <li>03:30 AM: Tarea programada diaria <code>CyberSec_ClamAV_DailyScan_0330</code></li>
+                      <li>13:00 PM: Tarea programada diaria <code>CyberSec_ClamAV_DailyScan_1300</code></li>
+                      <li>18:30 PM: Tarea programada diaria <code>CyberSec_ClamAV_DailyScan_1830</code></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="av-step">
+                  <span class="av-step-num">4</span>
+                  Escanea C:\Users y C:\Windows\Temp de forma diaria, limitando C:\Program Files a un escaneo profundo semanal
+                </div>
+                <div class="av-step">
+                  <span class="av-step-num">5</span>
+                  Los resultados se reportan automáticamente a este dashboard
+                </div>
               </div>
             </div>
           </div>

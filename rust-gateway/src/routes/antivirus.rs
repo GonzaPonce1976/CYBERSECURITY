@@ -406,13 +406,13 @@ async fn register_malware_on_chain(
 
 /// Sirve el instalador MSI para que el usuario pueda descargarlo directamente desde el dashboard
 async fn download_installer() -> impl IntoResponse {
-    let file_path = "packages/windows/cybersec-antivirus-agent.msi";
+    let file_path = "packages/windows/cybersec-gateway-network.msi";
     match std::fs::read(file_path) {
         Ok(bytes) => {
             Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/octet-stream")
-                .header(header::CONTENT_DISPOSITION, "attachment; filename=\"cybersec-antivirus-agent.msi\"")
+                .header(header::CONTENT_DISPOSITION, "attachment; filename=\"cybersec-gateway-network.msi\"")
                 .body(axum::body::Body::from(bytes))
                 .unwrap()
         }
