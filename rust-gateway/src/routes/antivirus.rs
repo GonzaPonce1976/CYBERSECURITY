@@ -404,20 +404,38 @@ async fn register_malware_on_chain(
     Ok(format!("{}", tx_hash))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DownloadQuery {
+    pub agent: Option<String>,
+}
+
 /// Sirve el instalador MSI para que el usuario pueda descargarlo directamente desde el dashboard
-async fn download_installer() -> impl IntoResponse {
-    let file_path = "packages/windows/cybersec-gateway-network.msi";
+async fn download_installer(
+    Query(params): Query<DownloadQuery>,
+) -> impl IntoResponse {
+    let agent_type = params.agent.unwrap_or_else(|| "network".to_string());
+    let file_path = if agent_type == "antivirus" {
+        "packages/windows/cybersec-antivirus-agent.msi"
+    } else {
+        "packages/windows/cybersec-gateway-network.msi"
+    };
+    let filename = if agent_type == "antivirus" {
+        "cybersec-antivirus-agent.msi"
+    } else {
+        "cybersec-gateway-network.msi"
+    };
+
     match std::fs::read(file_path) {
         Ok(bytes) => {
             Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/octet-stream")
-                .header(header::CONTENT_DISPOSITION, "attachment; filename=\"cybersec-gateway-network.msi\"")
+                .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
                 .body(axum::body::Body::from(bytes))
                 .unwrap()
         }
         Err(err) => {
-            error!("Error leyendo MSI para descarga: {:?}", err);
+            error!("Error leyendo MSI para descarga ({}): {:?}", file_path, err);
             Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(axum::body::Body::from("Instalador MSI no encontrado. Asegurese de compilarlo antes."))

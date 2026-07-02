@@ -2238,17 +2238,20 @@ window.showAvDetail = function(idx) {
   if (modal) modal.style.display = 'flex';
 };
 
-/** Descarga el instalador MSI cybersec-gateway-network.msi desde el Gateway */
-window.downloadAntivirusMsi = function() {
+/** Descarga el instalador MSI (network o antivirus) desde el Gateway */
+window.downloadAntivirusMsi = function(type) {
+  const agentType = type === 'antivirus' ? 'antivirus' : 'network';
+  const filename = type === 'antivirus' ? 'cybersec-antivirus-agent.msi' : 'cybersec-gateway-network.msi';
+  
   const BASE = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:8080';
-  const url = `${BASE}/api/antivirus/download-installer`;
+  const url = `${BASE}/api/antivirus/download-installer?agent=${agentType}`;
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'cybersec-gateway-network.msi';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  toast('Iniciando descarga del instalador MSI...', 'success');
+  toast(`Iniciando descarga de ${filename}...`, 'success');
 };
 
 /** Muestra el modal de guía de instalación de ClamAV */
