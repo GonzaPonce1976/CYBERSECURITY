@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="{8141986B-5826-4710-822E-B86170C041BE}" Codepage="1252" Language="1033" Manufacturer="Cybersecurity DApp" Name="Cybersec Antivirus Agent" UpgradeCode="{4F2E8F5F-0D10-4F5E-9D8F-0C600F4C9C2C}" Version="1.0.0">
+        <Package Comments="Instala ClamAV, configura tareas de escaneo diario/semanal y reporta al Gateway." Compressed="yes" Description="CyberSecurity DApp - ClamAV Antivirus Agent &amp; Reporting" InstallerVersion="500" Languages="1033" Manufacturer="Cybersecurity DApp" Platform="x64" />
+        <CustomAction Id="SetRunInstallerCmdProperty" Property="RunClamavInstaller" Value="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]install_clamav.ps1&quot; -GatewayIp [GATEWAY_IP] -SkipAdminCheck" />
+        <CustomAction Id="RunClamavInstaller" BinaryKey="WixCA" DllEntry="CAQuietExec64" Execute="deferred" Impersonate="no" />
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="CybersecGateway" ShortName="foqupxhg">
+                    <Component Id="AntivirusScriptsComponent" Guid="{E24A2386-6EF9-4C45-8F3D-F8F2B96C3A25}" Win64="yes">
+                        <File Id="InstallClamavPs1" Name="install_clamav.ps1" KeyPath="yes" ShortName="7m8ca1ky.ps1" DiskId="1" Source="C:\Users\USUARIO\AppData\Local\Temp\msi_verify_refactor_py\File\InstallClamavPs1" />
+                        <File Id="ScanAndReportPs1" Name="scan_and_report.ps1" ShortName="2yqzy53c.ps1" DiskId="1" Source="C:\Users\USUARIO\AppData\Local\Temp\msi_verify_refactor_py\File\ScanAndReportPs1" />
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+        <Feature Id="ProductFeature" Level="1" Title="Cybersec Antivirus Agent">
+            <ComponentRef Id="AntivirusScriptsComponent" />
+        </Feature>
+        <MajorUpgrade DowngradeErrorMessage="Ya existe una versión más reciente de Cybersec Antivirus Agent instalada." Schedule="afterInstallValidate" />
+        <Media Id="1" Cabinet="antivirus.cab" EmbedCab="yes" />
+        <Property Id="ALLUSERS" Value="1" />
+        <Property Id="GATEWAY_IP" Value="192.168.125.250" />
+        <Property Id="WIX_DOWNGRADE_DETECTED" Secure="yes" />
+        <Property Id="WIX_UPGRADE_DETECTED" Secure="yes" />
+        <UIRef Id="WixUI_Minimal" />
+        <InstallExecuteSequence>
+            <Custom Action="SetRunInstallerCmdProperty" After="InstallFiles">NOT Installed</Custom>
+            <Custom Action="RunClamavInstaller" After="SetRunInstallerCmdProperty">NOT Installed</Custom>
+        </InstallExecuteSequence>
+    </Product>
+</Wix>

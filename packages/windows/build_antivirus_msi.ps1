@@ -3,8 +3,8 @@ $ScriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent
 $WixDir    = Join-Path $ScriptDir "wix314-binaries"
 $Candle    = Join-Path $WixDir "candle.exe"
 $Light     = Join-Path $WixDir "light.exe"
-$WxsFile   = Join-Path $ScriptDir "antivirus-installer.wxs"
-$WixObj    = Join-Path $ScriptDir "antivirus-installer.wixobj"
+$WxsFile   = Join-Path $ScriptDir "cybersec-antivirus-agent.wxs"
+$WixObj    = Join-Path $ScriptDir "cybersec-antivirus-agent.wixobj"
 $OutputMsi = Join-Path $ScriptDir "cybersec-antivirus-agent.msi"
 
 Write-Host "=== CyberSec Antivirus Agent - MSI Build Pipeline ===" -ForegroundColor Cyan
