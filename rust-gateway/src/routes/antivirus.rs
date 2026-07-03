@@ -292,24 +292,64 @@ async fn results_by_hostname(
 }
 
 // ─── GET /api/antivirus/summary ───────────────────────────────────────────────
-/// Devuelve estadísticas agregadas para los KPI cards del dashboard
+/// Devuelve estadísticas agregadas para los KPI cards del dashboard (agrupados por hostname)
 async fn get_summary(
     State(state): State<Arc<AppState>>,
 ) -> Json<Value> {
+    use std::collections::HashMap;
+
+    // Estructura para agrupar por hostname (case-insensitive)
+    struct DeviceGroup {
+        primary: Option<AntivirusScanResult>,
+        selftest: Option<AntivirusScanResult>,
+    }
+
+    let mut grouped_devices: HashMap<String, DeviceGroup> = HashMap::new();
+
+    for entry in state.antivirus_cache.iter() {
+        let r = entry.value();
+        let key = r.hostname.to_lowercase();
+        let mode = r.scan_mode.to_uppercase();
+
+        let device_entry = grouped_devices.entry(key).or_insert(DeviceGroup {
+            primary: None,
+            selftest: None,
+        });
+
+        if mode == "SELFTEST" {
+            if let Some(ref current) = device_entry.selftest {
+                if r.timestamp > current.timestamp {
+                    device_entry.selftest = Some(r.clone());
+                }
+            } else {
+                device_entry.selftest = Some(r.clone());
+            }
+        } else {
+            if let Some(ref current) = device_entry.primary {
+                if r.timestamp > current.timestamp {
+                    device_entry.primary = Some(r.clone());
+                }
+            } else {
+                device_entry.primary = Some(r.clone());
+            }
+        }
+    }
+
     let mut clean    = 0u32;
     let mut infected = 0u32;
     let mut error    = 0u32;
     let mut pending  = 0u32;
     let mut total_infected_files = 0u32;
 
-    for entry in state.antivirus_cache.iter() {
-        let r = entry.value();
-        total_infected_files += r.infected_count;
-        match r.status {
-            ScanStatus::Clean    => clean    += 1,
-            ScanStatus::Infected => infected += 1,
-            ScanStatus::Error    => error    += 1,
-            ScanStatus::Pending  => pending  += 1,
+    for (_hostname, group) in grouped_devices.iter() {
+        if let Some(ref r) = group.primary.as_ref().or(group.selftest.as_ref()) {
+            total_infected_files += r.infected_count;
+            match r.status {
+                ScanStatus::Clean    => clean    += 1,
+                ScanStatus::Infected => infected += 1,
+                ScanStatus::Error    => error    += 1,
+                ScanStatus::Pending  => pending  += 1,
+            }
         }
     }
 
