@@ -2055,7 +2055,12 @@ async function loadAntivirusResults() {
     const res  = await fetch(`${BASE}/api/antivirus/results?limit=200`);
     const json = await res.json();
     _avResultsCache = json.data || [];
-    await renderAntivirusTable(_avResultsCache);
+    // Re-aplicar filtros activos (búsqueda, estado, modo) sobre los nuevos datos recibidos
+    if (typeof window.filterAntivirusTable === 'function') {
+      await window.filterAntivirusTable();
+    } else {
+      await renderAntivirusTable(_avResultsCache);
+    }
   } catch (e) {
     console.warn('Antivirus results error:', e);
     const tbody = document.getElementById('av-devices-tbody');
@@ -2354,9 +2359,36 @@ window.copyInstallCmd = function() {
   });
 };
 
-/** Actualiza manualmente la vista antivirus */
-window.refreshAntivirusView = function() {
-  loadAntivirusView();
+/** Actualiza manualmente la vista antivirus con feedback visual y de carga */
+window.refreshAntivirusView = async function() {
+  const btn = document.getElementById('av-refresh-btn');
+  const originalHtml = btn ? btn.innerHTML : '🔄 Actualizar';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Actualizando...';
+  }
+
+  try {
+    await loadAntivirusView();
+    if (typeof window.toast === 'function') {
+      window.toast("Datos de antivirus actualizados", "success");
+    } else if (typeof toast === 'function') {
+      toast("Datos de antivirus actualizados", "success");
+    }
+  } catch (e) {
+    console.error('Error al actualizar vista antivirus:', e);
+    if (typeof window.toast === 'function') {
+      window.toast("Error al conectar con el Gateway", "error");
+    } else if (typeof toast === 'function') {
+      toast("Error al conectar con el Gateway", "error");
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
 };
 
 // Auto-polling antivirus cada 60 segundos si la vista está activa
