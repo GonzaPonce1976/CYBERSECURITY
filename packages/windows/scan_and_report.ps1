@@ -568,50 +568,44 @@ if (Test-Path $ScanLog) {
     try { Remove-Item $ScanLog -Force -ErrorAction SilentlyContinue } catch {}
 }
 
-# ── Conteo de archivos escaneados (necesario ANTES de determinar el estado) ──
+# --- Conteo de archivos escaneados (necesario ANTES de determinar el estado) ---
 # Se extrae del output de clamscan para distinguir falla real de archivos bloqueados.
 $ScannedCount = 0
 $allOutput = "$StdOut`n$StdErr"
 if ($allOutput -match "Scanned files:\s+(\d+)") { $ScannedCount = [int]$Matches[1] }
 elseif ($allOutput -match "(\d+)\s+files?\s+scanned") { $ScannedCount = [int]$Matches[1] }
 
-# ── Determinacion del estado final ───────────────────────────────────────────
+# --- Determinacion del estado final ---
 $ErrorMessage = $null
 
 if ($ExitCode -eq 1 -or $InfectedCount -gt 0) {
-    # ── INFECTADO: ClamAV encontro amenazas ──────────────────────────────────
+    # --- INFECTADO: ClamAV encontro amenazas ---
     $ScanStatus = "INFECTED"
     Write-Log "SE DETECTARON AMENAZAS: $InfectedCount archivos infectados" "WARN"
     foreach ($f in $InfectedFiles) { Write-Log "   AMENAZA: $f" "WARN" }
 
 } elseif ($ExitCode -ge 2 -and $ScannedCount -gt 0) {
-    # ── LIMPIO con advertencia: el escaneo proceso archivos exitosamente ─────
+    # --- LIMPIO con advertencia: el escaneo proceso archivos exitosamente ---
     # Exit Code 2 con archivos > 0 indica que algunos archivos del sistema
     # operativo Windows estaban bloqueados o en uso durante el escaneo.
     # Esto es un comportamiento completamente normal en entornos Windows
-    # (pagefile.sys, hiberfil.sys, archivos de cache del navegador, temporales
-    # de Office, bloqueos del kernel, etc.).
-    # El dispositivo esta LIMPIO — no se encontraron amenazas.
+    # (pagefile.sys, hiberfil.sys, archivos en uso, temporales, etc.).
+    # El dispositivo esta LIMPIO - no se encontraron amenazas.
     $ScanStatus   = "CLEAN"
-    $ErrorMessage = "Escaneo exitoso: $ScannedCount archivos analizados, sin amenazas detectadas. " +
-                    "Nota: algunos archivos del sistema operativo estaban en uso y no pudieron " +
-                    "ser accedidos durante el escaneo (comportamiento normal en Windows — " +
-                    "Exit Code $ExitCode)."
-    Write-Log ("Escaneo completado: $ScannedCount archivos escaneados, 0 amenazas. " +
-               "Algunos archivos del SO estaban bloqueados — normal en Windows (Exit Code: $ExitCode).") "INFO"
+    $ErrorMessage = "Escaneo exitoso: $ScannedCount archivos analizados, sin amenazas detectadas. Nota: algunos archivos del sistema operativo estaban en uso y no pudieron ser accedidos durante el escaneo (comportamiento normal en Windows - Exit Code $ExitCode)."
+    Write-Log "Escaneo completado: $ScannedCount archivos escaneados, 0 amenazas. Algunos archivos del SO estaban bloqueados - normal en Windows (Exit Code: $ExitCode)." "INFO"
 
 } elseif ($ExitCode -ge 2 -and $ScannedCount -eq 0) {
-    # ── ERROR REAL: ClamAV no pudo procesar ningun archivo ───────────────────
+    # --- ERROR REAL: ClamAV no pudo procesar ningun archivo ---
     # Exit Code 2 con 0 archivos indica una falla genuina del motor:
     # ClamAV no instalado correctamente, sin permisos, paths invalidos,
     # firmas corruptas o crash del proceso.
     $ScanStatus   = "ERROR"
-    $ErrorMessage = "Error real de escaneo: ClamAV no proceso ningun archivo (Exit Code $ExitCode). " +
-                    "Verifique la instalacion de ClamAV y los permisos. StdErr: $StdErr"
+    $ErrorMessage = "Error real de escaneo: ClamAV no proceso ningun archivo (Exit Code $ExitCode). Verifique la instalacion de ClamAV y los permisos. StdErr: $StdErr"
     Write-Log "ERROR REAL: 0 archivos procesados (Exit Code: $ExitCode). Verificar instalacion. StdErr: $StdErr" "ERROR"
 
 } else {
-    # ── LIMPIO: Exit Code 0, sin errores, sin amenazas ───────────────────────
+    # --- LIMPIO: Exit Code 0, sin errores, sin amenazas ---
     Write-Log "Sin amenazas detectadas. Estado: CLEAN ($ScannedCount archivos escaneados)"
 }
 
