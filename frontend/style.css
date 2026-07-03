@@ -1470,6 +1470,36 @@ tr:last-child td { border-bottom: none; }
 
 .av-mode-daily { background: rgba(124, 58, 237, 0.12); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.3); }
 .av-mode-weekly { background: rgba(0, 212, 255, 0.12); color: var(--cyan); border: 1px solid rgba(0, 212, 255, 0.3); }
+.av-mode-selftest { background: rgba(100, 116, 139, 0.12); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.25); }
+
+/* Chip de autoprueba (SELFTEST) que aparece debajo del badge principal de modo */
+.av-selftest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 255, 157, 0.07);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 157, 0.18);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.av-selftest-chip.error {
+  background: rgba(255, 123, 0, 0.07);
+  color: var(--orange);
+  border-color: rgba(255, 123, 0, 0.18);
+}
+
+/* Columna MODO en dos líneas: badge principal + chip selftest */
+.av-mode-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
 
 .av-row-infected {
   background: rgba(255, 58, 92, 0.02) !important;

@@ -2067,15 +2067,23 @@ async function loadAntivirusResults() {
   }
 }
 
-/** Renderiza la tabla de dispositivos con resultados de escaneo */
+/** Renderiza la tabla de dispositivos con resultados de escaneo.
+ *
+ *  AGRUPACIÓN POR HOSTNAME (1 fila por dispositivo):
+ *  - Si el dispositivo tiene resultados DAILY o WEEKLY se muestra el más reciente.
+ *  - Si solo tiene SELFTEST se muestra ese resultado.
+ *  - El estado de la autoprueba (SELFTEST) aparece como chip secundario
+ *    en la columna MODO, sin crear una fila duplicada.
+ *
+ *  Los datos originales NO se modifican — solo cambia la vista.
+ */
 async function renderAntivirusTable(results) {
   const tbody = document.getElementById('av-devices-tbody');
   const count = document.getElementById('av-table-count');
   if (!tbody) return;
 
-  if (count) count.textContent = `${results.length} dispositivo${results.length !== 1 ? 's' : ''}`;
-
   if (!results.length) {
+    if (count) count.textContent = '0 dispositivos';
     tbody.innerHTML = `
       <tr><td colspan="10" class="empty-state">
         <div class="empty-icon">🛡️</div>
@@ -2087,7 +2095,57 @@ async function renderAntivirusTable(results) {
     return;
   }
 
-  // Instanciar el contrato de la Registry global para búsquedas de UUID
+  // ── 1. AGRUPAR POR HOSTNAME ───────────────────────────────────────────────
+  // Para cada dispositivo conservamos:
+  //   primary  → el resultado más reciente de modo DAILY o WEEKLY
+  //   selftest → el resultado más reciente de modo SELFTEST
+  const grouped = new Map(); // key: hostname.toLowerCase()
+
+  for (const r of results) {
+    const key  = (r.hostname || 'unknown').toLowerCase();
+    const mode = (r.scan_mode || 'Daily').toUpperCase();
+
+    if (!grouped.has(key)) {
+      grouped.set(key, { primary: null, selftest: null });
+    }
+    const entry = grouped.get(key);
+
+    if (mode === 'SELFTEST') {
+      // Conservar el selftest más reciente
+      if (!entry.selftest || (r.timestamp || '') > (entry.selftest.timestamp || '')) {
+        entry.selftest = r;
+      }
+    } else {
+      // Conservar el resultado de escaneo real más reciente (DAILY / WEEKLY / …)
+      if (!entry.primary || (r.timestamp || '') > (entry.primary.timestamp || '')) {
+        entry.primary = r;
+      }
+    }
+  }
+
+  // ── 2. CONSTRUIR LISTA DE VISUALIZACIÓN ───────────────────────────────────
+  // Cada entrada del Map produce exactamente 1 fila.
+  const displayList = [];
+  for (const [, entry] of grouped) {
+    const row = { ...(entry.primary ?? entry.selftest) };
+    // Adjuntar info de selftest para usarla en la columna MODO
+    row._selftest        = entry.selftest;
+    row._hasDailyResult  = !!entry.primary;
+    displayList.push(row);
+  }
+
+  // Ordenar por timestamp desc (más reciente primero)
+  displayList.sort((a, b) =>
+    (b.timestamp || '').localeCompare(a.timestamp || '')
+  );
+
+  // Contador: muestra dispositivos únicos
+  const uniqueCount = displayList.length;
+  if (count) {
+    count.textContent = `${uniqueCount} dispositivo${uniqueCount !== 1 ? 's' : ''}`;
+  }
+
+  // ── 3. LOOKUP BLOCKCHAIN (ArcatRegistry) ──────────────────────────────────
   let registryContract = null;
   try {
     const activeSigner = getSigner();
@@ -2100,22 +2158,23 @@ async function renderAntivirusTable(results) {
       const { Contract } = await import('ethers');
       const overview = await api.getArcatOverview();
       const registryAddr = overview?.arcat?.arcat_registry;
-      if (registryAddr && registryAddr !== "0x0000000000000000000000000000000000000000") {
+      if (registryAddr && registryAddr !== '0x0000000000000000000000000000000000000000') {
         registryContract = new Contract(registryAddr, [
-          "function lookupByUUID(string uuid) external view returns (address uoContract, uint256 tokenId, bool found)"
+          'function lookupByUUID(string uuid) external view returns (address uoContract, uint256 tokenId, bool found)'
         ], providerOrSigner);
       }
     }
   } catch (e) {
-    console.warn("No se pudo conectar a ArcatRegistry para lookup en tabla antivirus:", e);
+    console.warn('No se pudo conectar a ArcatRegistry para lookup en tabla antivirus:', e);
   }
 
+  // ── 4. HELPERS DE RENDERIZADO ────────────────────────────────────────────
   const statusBadge = (s) => {
     const map = {
-      CLEAN:    { icon: '🟢', label: 'Limpio',    cls: 'av-badge-clean' },
+      CLEAN:    { icon: '🟢', label: 'Limpio',    cls: 'av-badge-clean'    },
       INFECTED: { icon: '🔴', label: 'Infectado', cls: 'av-badge-infected' },
-      ERROR:    { icon: '🟠', label: 'Error',      cls: 'av-badge-error' },
-      PENDING:  { icon: '🟡', label: 'Pendiente', cls: 'av-badge-pending' },
+      ERROR:    { icon: '🟠', label: 'Error',      cls: 'av-badge-error'   },
+      PENDING:  { icon: '🟡', label: 'Pendiente', cls: 'av-badge-pending'  },
     };
     const m = map[s?.toUpperCase()] || map.PENDING;
     return `<span class="av-status-badge ${m.cls}">${m.icon} ${m.label}</span>`;
@@ -2129,10 +2188,35 @@ async function renderAntivirusTable(results) {
 
   const shortUUID = (uuid) => uuid ? uuid.substring(0, 8) + '…' : '—';
 
-  const rows = await Promise.all(results.map(async (r, i) => {
-    const infected   = parseInt(r.infected_count || 0);
+  /**
+   * Genera el contenido de la celda MODO:
+   *  - Badge principal del modo real (DAILY / WEEKLY / SELFTEST si no hay otro)
+   *  - Si hay resultado de autoprueba: chip secundario con su estado
+   */
+  const modeCellHtml = (r) => {
+    const mode      = (r.scan_mode || 'Daily').toUpperCase();
+    const modeLower = mode.toLowerCase();
+    const mainBadge = `<span class="av-mode-badge av-mode-${modeLower}">${mode}</span>`;
+
+    // Chip de autoprueba (solo si hay selftest Y la fila muestra resultado real)
+    let selftestChip = '';
+    if (r._hasDailyResult && r._selftest) {
+      const stStatus = (r._selftest.status || '').toUpperCase();
+      const isOk     = stStatus === 'CLEAN';
+      const icon     = isOk ? '✓' : '⚠';
+      const label    = isOk ? 'Autoprueba OK' : 'Autoprueba: error';
+      const cls      = isOk ? '' : ' error';
+      selftestChip   = `<span class="av-selftest-chip${cls}" title="SELFTEST — ${new Date(r._selftest.timestamp || '').toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}">${icon} ${label}</span>`;
+    }
+
+    return `<div class="av-mode-cell">${mainBadge}${selftestChip}</div>`;
+  };
+
+  // ── 5. GENERAR FILAS ──────────────────────────────────────────────────────
+  const rows = await Promise.all(displayList.map(async (r, i) => {
+    const infected    = parseInt(r.infected_count || 0);
     const infectedCls = infected > 0 ? 'av-row-infected' : '';
-    
+
     let txLink = '<span class="av-tx-none">—</span>';
     if (r.blockchain_tx) {
       txLink = `<a href="#" class="av-tx-link" title="${r.blockchain_tx}" onclick="return false;">
@@ -2142,7 +2226,7 @@ async function renderAntivirusTable(results) {
       try {
         const [uoContract, tokenId, found] = await registryContract.lookupByUUID(r.device_uuid);
         if (found) {
-          txLink = `<span class="av-sbt-badge" title="SBT Acuñado - Contrato UO: ${uoContract} (Token #${tokenId})" style="cursor:help; background:linear-gradient(135deg, #4f46e5, #4338ca); color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block; border:1px solid #6366f1;">
+          txLink = `<span class="av-sbt-badge" title="SBT Acuñado — Contrato UO: ${uoContract} (Token #${tokenId})" style="cursor:help; background:linear-gradient(135deg,#4f46e5,#4338ca); color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block; border:1px solid #6366f1;">
                       🏛️ SBT #${tokenId}
                     </span>`;
         }
@@ -2156,25 +2240,33 @@ async function renderAntivirusTable(results) {
       : '<span style="opacity:.4">—</span>';
 
     return `
-      <tr class="${infectedCls}" data-av-hostname="${r.hostname?.toLowerCase() || ''}"
+      <tr class="${infectedCls}"
+          data-av-hostname="${r.hostname?.toLowerCase() || ''}"
           data-av-uuid="${r.device_uuid?.toLowerCase() || ''}"
           data-av-status="${r.status?.toUpperCase() || 'PENDING'}"
           data-av-mode="${r.scan_mode || 'Daily'}">
         <td>${statusBadge(r.status)}</td>
         <td class="av-hostname">${r.hostname || '—'}</td>
         <td class="av-uuid" title="${r.device_uuid || ''}">${shortUUID(r.device_uuid)}</td>
-        <td><span class="av-mode-badge av-mode-${(r.scan_mode||'Daily').toLowerCase()}">${r.scan_mode || 'Daily'}</span></td>
+        <td>${modeCellHtml(r)}</td>
         <td class="av-num">${(r.scanned_files || 0).toLocaleString()}</td>
         <td class="av-num ${infected > 0 ? 'av-infected-count' : ''}">${infected > 0 ? `🦠 ${infected}` : '0'}</td>
         <td class="av-ts">${fmtDate(r.timestamp)}</td>
-        <td class="av-engine" style="text-align: center;">${(r.scanner || 'ClamAV').replace('ClamAV ', 'v')}</td>
-        <td style="text-align: center;">${txLink}</td>
+        <td class="av-engine" style="text-align:center;">${(r.scanner || 'ClamAV').replace('ClamAV ', 'v')}</td>
+        <td style="text-align:center;">${txLink}</td>
         <td>${detailBtn}</td>
       </tr>`;
   }));
 
   tbody.innerHTML = rows.join('');
+
+  // ── 6. EXPONER displayList para showAvDetail ──────────────────────────────
+  // showAvDetail usa el índice del array filtrado; actualizamos la referencia
+  // para que el modal de amenazas funcione correctamente con los índices agrupados.
+  window._avDisplayList = displayList;
 }
+
+
 
 /** Filtra la tabla por búsqueda y dropdowns de estado/modo */
 window.filterAntivirusTable = async function(searchVal) {
@@ -2194,20 +2286,14 @@ window.filterAntivirusTable = async function(searchVal) {
   await renderAntivirusTable(filtered);
 };
 
-/** Muestra el modal de detalle de amenazas para un dispositivo */
+/** Muestra el modal de detalle de amenazas para un dispositivo.
+ *  Usa window._avDisplayList (lista agrupada por hostname) para
+ *  mantener coherencia de índices con las filas renderizadas.
+ */
 window.showAvDetail = function(idx) {
-  // Reconstruir el índice filtrando según filtros activos
-  const search = (document.getElementById('av-search')?.value || '').toLowerCase();
-  const status = document.getElementById('av-filter-status')?.value || '';
-  const mode   = document.getElementById('av-filter-mode')?.value   || '';
-  const filtered = _avResultsCache.filter(r => {
-    const ms = !search || (r.hostname||'').toLowerCase().includes(search) || (r.device_uuid||'').toLowerCase().includes(search);
-    const mst = !status || (r.status||'').toUpperCase() === status.toUpperCase();
-    const mm  = !mode   || (r.scan_mode||'') === mode;
-    return ms && mst && mm;
-  });
-
-  const r = filtered[idx];
+  // Usar la lista agrupada expuesta por renderAntivirusTable
+  const displayList = window._avDisplayList || [];
+  const r = displayList[idx];
   if (!r) return;
 
   const modal = document.getElementById('av-detail-modal');
