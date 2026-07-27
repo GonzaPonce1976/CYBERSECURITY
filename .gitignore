@@ -191,6 +191,7 @@ artifacts/
 cache/
 frontend/node_modules/
 frontend/.env
+.hardhat_db/
 
 # Rust gateway build and cache artifacts
 rust-gateway/target/
@@ -214,3 +215,5 @@ rust-gateway/.env
 /packages/windows/wix314-binaries.zip
 /packages/windows/wix314.exe
 /packages/windows/cybersec-gateway-service.exe
+
+.vercel

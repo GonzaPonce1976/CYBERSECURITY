@@ -74,11 +74,14 @@ Esta arquitectura avanzada jerárquica modela la estructura de ARCAT en la block
 # Levantar todo el stack
 npm run docker:up
 
-# Desarrollar contratos en red local
-npm run dev:contracts
+# Desarrollar contratos en red local (persistente)
+npm run dev:contracts:persist
 
 # Desplegar contratos ARCAT en localhost
 npm run deploy:arcat:local
+
+# Restaurar dispositivos ARCAT STAFF on-chain
+npm run restore:arcat:local
 
 # Levantar el gateway Rust
 npm run dev:gateway
