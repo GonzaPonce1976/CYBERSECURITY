@@ -310,74 +310,19 @@ impl AppState {
             [],
         );
 
+        // Tabla para administrar proyectos ARCAT desde el dashboard
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS arcat_contracts (
-                contract_name TEXT PRIMARY KEY,
-                address TEXT NOT NULL,
-                deployed_at TEXT NOT NULL,
-                deploy_tx TEXT,
-                network TEXT,
-                metadata TEXT
-            )",
-            [],
-        )?;
-
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS sbt_devices (
-                token_id TEXT PRIMARY KEY,
-                uo_contract TEXT NOT NULL,
-                hostname TEXT NOT NULL UNIQUE,
-                uuid TEXT,
-                device_name TEXT,
-                device_type TEXT,
-                is_active INTEGER NOT NULL DEFAULT 1,
-                registered_at TEXT,
-                registered_tx TEXT,
-                last_seen_at TEXT,
-                last_updated_at TEXT,
-                on_chain_verified INTEGER NOT NULL DEFAULT 0,
-                source TEXT,
-                raw_data TEXT
-            )",
-            [],
-        )?;
-
-        let _ = conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sbt_hostname ON sbt_devices (hostname)",
-            [],
-        );
-        let _ = conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sbt_uuid ON sbt_devices (uuid)",
-            [],
-        );
-
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS arcat_audits (
+            "CREATE TABLE IF NOT EXISTS arcat_projects (
                 id TEXT PRIMARY KEY,
-                token_id TEXT NOT NULL,
-                uo_contract TEXT NOT NULL,
-                event_type TEXT NOT NULL,
-                severity TEXT,
+                name TEXT NOT NULL,
                 description TEXT,
-                data_hash TEXT,
-                malware_family TEXT,
-                ioc_hashes TEXT,
-                src_ip TEXT,
-                reporter TEXT,
-                tx_hash TEXT,
-                alert_id TEXT,
+                dg_code TEXT,
+                uo_code TEXT,
+                uo_address TEXT,
+                status TEXT,
+                tech_stack TEXT,
                 created_at TEXT NOT NULL,
-                on_chain_verified INTEGER NOT NULL DEFAULT 0
-            )",
-            [],
-        )?;
-
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS arcat_sync_state (
-                id INTEGER PRIMARY KEY,
-                last_synced_block INTEGER,
-                last_reconcile_at TEXT,
-                status TEXT
+                updated_at TEXT NOT NULL
             )",
             [],
         )?;
@@ -448,6 +393,41 @@ impl AppState {
             }
         }
 
+        // Cargar resultados antivirus persistentes en memoria para que el dashboard
+        // muestre los dispositivos aunque el gateway se haya reiniciado.
+        let mut stmt = conn.prepare("SELECT id, data FROM antivirus_scans")?;
+        let av_rows: Vec<(String, String)> = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+        let mut av_loaded = 0usize;
+        let mut av_skipped = 0usize;
+        for (_id, data) in av_rows {
+            match serde_json::from_str::<AntivirusScanResult>(&data) {
+                Ok(result) => {
+                    let key = format!("{}:{}", result.hostname, result.scan_mode);
+                    if let Some(mut existing) = self.antivirus_cache.get_mut(&key) {
+                        if result.timestamp > existing.timestamp {
+                            *existing = result;
+                        }
+                    } else {
+                        self.antivirus_cache.insert(key, result);
+                    }
+                    av_loaded += 1;
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️  Resultado antivirus omitido en cache (id desconocido): {}", e);
+                    av_skipped += 1;
+                }
+            }
+        }
+        if av_skipped > 0 {
+            tracing::warn!("⚠️  {} resultados antivirus omitidos por esquema inválido. Ejecuta STOP + START para limpiar la caché.", av_skipped);
+        }
+        tracing::info!("📦 Resultados antivirus cargados desde DB: {} ok, {} omitidos", av_loaded, av_skipped);
+
         Ok(())
     }
 
@@ -472,130 +452,6 @@ impl AppState {
         conn.execute(
             "INSERT OR REPLACE INTO cve_cache (cve_id, data, created_at) VALUES (?1, ?2, ?3)",
             [cve_id, &data_str, &created_at],
-        )?;
-        Ok(())
-    }
-
-    pub fn save_arcat_contract(
-        &self,
-        contract_name: &str,
-        address: &str,
-        deployed_at: &str,
-        deploy_tx: &str,
-        network: &str,
-        metadata: &str,
-    ) -> Result<()> {
-        let conn = self.db_pool.get()?;
-        conn.execute(
-            "INSERT OR REPLACE INTO arcat_contracts (contract_name, address, deployed_at, deploy_tx, network, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            [contract_name, address, deployed_at, deploy_tx, network, metadata],
-        )?;
-        Ok(())
-    }
-
-    pub fn save_sbt_device(
-        &self,
-        device: &crate::clients::arcat::DeviceInfo,
-        source: &str,
-        raw_data: Option<&serde_json::Value>,
-    ) -> Result<()> {
-        let conn = self.db_pool.get()?;
-        let raw_text = raw_data
-            .map(|value| serde_json::to_string(value).unwrap_or_default())
-            .unwrap_or_default();
-        let now = Utc::now().to_rfc3339();
-        conn.execute(
-            "INSERT OR REPLACE INTO sbt_devices (
-                token_id,
-                uo_contract,
-                hostname,
-                uuid,
-                device_name,
-                device_type,
-                is_active,
-                registered_at,
-                registered_tx,
-                last_seen_at,
-                last_updated_at,
-                on_chain_verified,
-                source,
-                raw_data
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
-            rusqlite::params![
-                device.token_id,
-                device.uo_contract,
-                device.hostname,
-                device.uuid,
-                device.device_name,
-                device.device_type,
-                device.is_active as i32,
-                device.registered_at,
-                "",
-                now,
-                now,
-                device.is_active as i32,
-                source,
-                raw_text,
-            ],
-        )?;
-        Ok(())
-    }
-
-    pub fn save_arcat_audit(
-        &self,
-        id: &str,
-        token_id: &str,
-        uo_contract: &str,
-        event_type: &str,
-        severity: &str,
-        description: &str,
-        data_hash: &str,
-        malware_family: &str,
-        ioc_hashes: &[String],
-        src_ip: &str,
-        reporter: &str,
-        tx_hash: Option<&str>,
-        alert_id: &str,
-        on_chain_verified: bool,
-    ) -> Result<()> {
-        let conn = self.db_pool.get()?;
-        let ioc_text = serde_json::to_string(ioc_hashes)?;
-        let created_at = Utc::now().to_rfc3339();
-        conn.execute(
-            "INSERT OR REPLACE INTO arcat_audits (
-                id,
-                token_id,
-                uo_contract,
-                event_type,
-                severity,
-                description,
-                data_hash,
-                malware_family,
-                ioc_hashes,
-                src_ip,
-                reporter,
-                tx_hash,
-                alert_id,
-                created_at,
-                on_chain_verified
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
-            rusqlite::params![
-                id,
-                token_id,
-                uo_contract,
-                event_type,
-                severity,
-                description,
-                data_hash,
-                malware_family,
-                ioc_text,
-                src_ip,
-                reporter,
-                tx_hash.unwrap_or_default(),
-                alert_id,
-                created_at,
-                on_chain_verified as i32,
-            ],
         )?;
         Ok(())
     }

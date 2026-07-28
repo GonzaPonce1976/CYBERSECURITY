@@ -111,12 +111,19 @@ function countBySeverity(alerts) {
 // ── Router de vistas ─────────────────────────────────────────
 function initRouter() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const view = btn.dataset.view;
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(`view-${view}`)?.classList.add('active');
+
+      if (view === 'arcat') {
+        await loadArcatOverview();
+      }
+      if (view === 'blockchain-admin') {
+        await loadArcatProjects();
+      }
     });
   });
 }
@@ -988,10 +995,9 @@ async function loadArcatOverview() {
         <p>Contratos ARCAT no configurados en el Gateway.</p>
         <p style="font-size:12px;color:var(--text-muted)">Asegúrate de que Hardhat local está corriendo y que se han ejecutado los deploys correspondientes.</p>
       </div>`;
-      return;
+    } else {
+      renderArcatTree(res);
     }
-
-    renderArcatTree(res);
   } catch (e) {
     treeContainer.innerHTML = `<div class="empty-state">
       <div class="empty-icon">⚠️</div>
@@ -1112,6 +1118,154 @@ function renderArcatTree(res) {
     // Cargar número de dispositivos asíncronamente
     updateUODeviceCount(item.dataset.address);
   });
+}
+
+async function loadArcatProjects() {
+  const list = $('arcat-projects-list');
+  if (!list) return;
+  list.innerHTML = `<div class="empty-state"><div class="spin">⏳</div> Cargando proyectos ARCAT...</div>`;
+
+  try {
+    const res = await api.getArcatProjects();
+    const projects = Array.isArray(res.data) ? res.data : [];
+    if (!projects.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🗂️</div>
+          <p>No hay proyectos ARCAT registrados aún.</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = projects.map(project => {
+      const status = project.status || 'Sin estado';
+      const tags = [project.dg_code, project.uo_code, project.status, project.tech_stack]
+        .filter(Boolean)
+        .map(v => `<span class="project-tag">${v}</span>`)
+        .join('');
+      return `
+        <div class="project-item">
+          <div class="project-item-title">
+            <span>${project.name}</span>
+            <div class="project-actions">
+              <button class="btn-secondary btn-sm btn-edit-project" data-id="${project.id}">Editar</button>
+              <button class="btn-secondary btn-sm btn-delete-project" data-id="${project.id}">Eliminar</button>
+            </div>
+          </div>
+          <div class="project-item-meta">
+            <div><strong>DG:</strong> ${project.dg_code || '—'}</div>
+            <div><strong>UO:</strong> ${project.uo_code || '—'}</div>
+            <div><strong>UO Address:</strong> ${project.uo_address || '—'}</div>
+            <div><strong>Estado:</strong> ${status}</div>
+          </div>
+          <div class="project-tags">${tags}</div>
+          <p style="margin-top:0.85rem;color:var(--text-secondary);font-size:0.86rem">${project.description || 'Sin descripción'}</p>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.btn-edit-project').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const projectId = btn.dataset.id;
+        const project = projects.find(p => p.id === projectId);
+        if (project) showArcatProjectForm(project);
+      });
+    });
+
+    list.querySelectorAll('.btn-delete-project').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const projectId = btn.dataset.id;
+        if (projectId && confirm('¿Eliminar este proyecto ARCAT? Esta acción no se puede deshacer.')) {
+          deleteArcatProject(projectId);
+        }
+      });
+    });
+  } catch (e) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <p>Error cargando proyectos: ${e.message}</p>
+      </div>`;
+  }
+}
+
+function showArcatProjectForm(project = null) {
+  const isEdit = Boolean(project);
+  const overlay = document.createElement('div');
+  overlay.className = 'arcat-modal-overlay';
+  overlay.innerHTML = `
+    <div class="arcat-modal" style="max-width: 520px; text-align: left;">
+      <div class="arcat-modal-title">${isEdit ? 'Editar' : 'Nuevo'} proyecto ARCAT</div>
+      <div class="arcat-modal-desc">${isEdit ? 'Actualiza los datos del proyecto.' : 'Crea un nuevo proyecto de gestión ARCAT.'}</div>
+      <div class="form-grid" style="display:grid;gap:12px;">
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Nombre</label>
+        <input id="project-name" value="${project?.name || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Descripción</label>
+        <textarea id="project-description" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;">${project?.description || ''}</textarea>
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Código DG</label>
+        <input id="project-dg-code" value="${project?.dg_code || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Código UO</label>
+        <input id="project-uo-code" value="${project?.uo_code || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Dirección UO</label>
+        <input id="project-uo-address" value="${project?.uo_address || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Estado</label>
+        <input id="project-status" value="${project?.status || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+        <label style="font-size:0.82rem;color:var(--text-secondary);">Tech Stack</label>
+        <input id="project-tech-stack" value="${project?.tech_stack || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />
+      </div>
+      <div class="arcat-modal-actions" style="justify-content: space-between; margin-top: 1rem;">
+        <button class="arcat-btn arcat-btn-secondary" id="btn-project-cancel">Cancelar</button>
+        <button class="arcat-btn arcat-btn-primary" id="btn-project-save">${isEdit ? 'Guardar cambios' : 'Crear proyecto'}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#btn-project-cancel')?.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+
+  overlay.querySelector('#btn-project-save')?.addEventListener('click', async () => {
+    const payload = {
+      name: overlay.querySelector('#project-name')?.value.trim(),
+      description: overlay.querySelector('#project-description')?.value.trim(),
+      dg_code: overlay.querySelector('#project-dg-code')?.value.trim(),
+      uo_code: overlay.querySelector('#project-uo-code')?.value.trim(),
+      uo_address: overlay.querySelector('#project-uo-address')?.value.trim(),
+      status: overlay.querySelector('#project-status')?.value.trim(),
+      tech_stack: overlay.querySelector('#project-tech-stack')?.value.trim(),
+    };
+
+    if (!payload.name) {
+      toast('El nombre del proyecto es obligatorio.', 'error');
+      return;
+    }
+
+    try {
+      if (isEdit && project?.id) {
+        await api.updateArcatProject(project.id, payload);
+        toast('Proyecto ARCAT actualizado.', 'success');
+      } else {
+        await api.createArcatProject(payload);
+        toast('Proyecto ARCAT creado.', 'success');
+      }
+      overlay.remove();
+      loadArcatProjects();
+    } catch (e) {
+      toast(`Error guardando proyecto: ${e.message}`, 'error');
+    }
+  });
+}
+
+async function deleteArcatProject(projectId) {
+  try {
+    await api.deleteArcatProject(projectId);
+    toast('Proyecto ARCAT eliminado.', 'success');
+    loadArcatProjects();
+  } catch (e) {
+    toast(`Error eliminando proyecto: ${e.message}`, 'error');
+  }
 }
 
 async function updateUODeviceCount(address) {
@@ -1932,8 +2086,8 @@ async function executeBlockchainMinting(uoAddress, name, uuid, hostname, dType, 
 }
 
 function initArcatView() {
-  $('nav-arcat')?.addEventListener('click', loadArcatOverview);
   $('btn-register-device')?.addEventListener('click', registerDeviceMetaMask);
+  $('btn-new-arcat-project')?.addEventListener('click', () => showArcatProjectForm());
 }
 
 // ── Bootstrap ────────────────────────────────────────────────
@@ -1947,6 +2101,14 @@ async function init() {
   initServicesView();
   initIocView();
   initArcatView();
+
+  // Cargar ARCAT si la vista ya está activa al iniciar
+  if (document.getElementById('view-arcat')?.classList.contains('active')) {
+    await loadArcatOverview();
+  }
+  if (document.getElementById('view-blockchain-admin')?.classList.contains('active')) {
+    await loadArcatProjects();
+  }
 
   // Wallet — detectar sesión previa sin popup (auto-connect silencioso)
   initWalletButton();
@@ -1972,7 +2134,6 @@ async function init() {
 
   // Audit cuando se cambia a esa vista
   document.getElementById('nav-audit')?.addEventListener('click', loadAuditTrail);
-  document.getElementById('nav-arcat')?.addEventListener('click', loadArcatOverview);
 
   // ── Antivirus — cargar cuando se activa la vista ──────────────────────────
   document.getElementById('nav-antivirus')?.addEventListener('click', () => {

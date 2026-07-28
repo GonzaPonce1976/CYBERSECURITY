@@ -12,15 +12,18 @@
 use axum::{
     extract::{Path, State},
     response::Json,
-    routing::{get, post},
+    routing::{delete, get, post, put},
     Router,
 };
+use chrono::{DateTime, Utc};
+use rusqlite::{params, types::Type};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
 use crate::state::AppState;
 use crate::clients::arcat::ArcatClient;
+use crate::models::arcat_project::ArcatProject;
 use alloy::primitives::U256;
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -32,6 +35,11 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/unit/{address}/audits",    get(get_unit_audits))
         .route("/unit/{address}/devices",   get(get_unit_devices))
         .route("/overview",                 get(get_overview))
+        .route("/projects",                 get(list_projects))
+        .route("/projects",                 post(create_project))
+        .route("/projects/{id}",            get(get_project))
+        .route("/projects/{id}",            put(update_project))
+        .route("/projects/{id}",            delete(delete_project))
         .route("/audit",                    post(post_manual_audit))
 }
 
@@ -394,6 +402,233 @@ async fn get_overview(State(state): State<Arc<AppState>>) -> Json<Value> {
 //   "ioc_hashes": ["sha256:abc123"],
 //   "src_ip": "192.168.1.100"
 // }
+
+#[derive(Debug, Deserialize)]
+pub struct ProjectRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub dg_code: Option<String>,
+    pub uo_code: Option<String>,
+    pub uo_address: Option<String>,
+    pub status: Option<String>,
+    pub tech_stack: Option<String>,
+}
+
+fn project_from_row(row: &rusqlite::Row) -> rusqlite::Result<ArcatProject> {
+    let created_at = row.get::<_, String>(8)?;
+    let updated_at = row.get::<_, String>(9)?;
+    Ok(ArcatProject {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        description: row.get(2)?,
+        dg_code: row.get(3)?,
+        uo_code: row.get(4)?,
+        uo_address: row.get(5)?,
+        status: row.get(6)?,
+        tech_stack: row.get(7)?,
+        created_at: DateTime::parse_from_rfc3339(&created_at)
+            .map(|dt| dt.with_timezone(&Utc))
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(created_at.len(), Type::Text, Box::new(e)))?,
+        updated_at: DateTime::parse_from_rfc3339(&updated_at)
+            .map(|dt| dt.with_timezone(&Utc))
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(updated_at.len(), Type::Text, Box::new(e)))?,
+    })
+}
+
+async fn list_projects(State(state): State<Arc<AppState>>) -> Json<Value> {
+    let conn = match state.db_pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Error obteniendo conexión DB para listar proyectos: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, name, description, dg_code, uo_code, uo_address, status, tech_stack, created_at, updated_at FROM arcat_projects ORDER BY created_at DESC"
+    ) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            tracing::error!("Error preparando consulta de proyectos ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    let projects: Vec<Value> = match stmt.query_map([], |row| {
+        project_from_row(row).map(|project| serde_json::to_value(project).unwrap_or(json!(null)))
+    }) {
+        Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
+        Err(e) => {
+            tracing::error!("Error leyendo proyectos ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    Json(json!({
+        "status": "ok",
+        "total": projects.len(),
+        "data": projects
+    }))
+}
+
+async fn get_project(
+    State(state): State<Arc<AppState>>,
+    Path(project_id): Path<String>,
+) -> Json<Value> {
+    let conn = match state.db_pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Error obteniendo conexión DB para proyecto ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, name, description, dg_code, uo_code, uo_address, status, tech_stack, created_at, updated_at FROM arcat_projects WHERE id = ?1"
+    ) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            tracing::error!("Error preparando consulta de proyecto ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    match stmt.query_row([project_id], |row| project_from_row(row)) {
+        Ok(project) => Json(json!({"status":"ok","data": project})),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Json(json!({
+            "status": "not_found",
+            "message": "Proyecto ARCAT no encontrado"
+        })),
+        Err(e) => {
+            tracing::error!("Error consultando proyecto ARCAT: {}", e);
+            Json(json!({"status":"error","message":"Error de base de datos"}))
+        }
+    }
+}
+
+async fn create_project(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Json(payload): axum::extract::Json<ProjectRequest>,
+) -> Json<Value> {
+    let project = ArcatProject::new(
+        payload.name,
+        payload.description,
+        payload.dg_code,
+        payload.uo_code,
+        payload.uo_address,
+        payload.status,
+        payload.tech_stack,
+    );
+
+    let conn = match state.db_pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Error obteniendo conexión DB para crear proyecto ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    let created_at = project.created_at.to_rfc3339();
+    let updated_at = project.updated_at.to_rfc3339();
+
+    match conn.execute(
+        "INSERT INTO arcat_projects (id, name, description, dg_code, uo_code, uo_address, status, tech_stack, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            project.id,
+            project.name,
+            project.description,
+            project.dg_code,
+            project.uo_code,
+            project.uo_address,
+            project.status,
+            project.tech_stack,
+            created_at,
+            updated_at,
+        ],
+    ) {
+        Ok(_) => Json(json!({"status":"ok","data": project})),
+        Err(e) => {
+            tracing::error!("Error insertando proyecto ARCAT: {}", e);
+            Json(json!({"status":"error","message":"Error de base de datos"}))
+        }
+    }
+}
+
+async fn update_project(
+    State(state): State<Arc<AppState>>,
+    Path(project_id): Path<String>,
+    axum::extract::Json(payload): axum::extract::Json<ProjectRequest>,
+) -> Json<Value> {
+    let conn = match state.db_pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Error obteniendo conexión DB para actualizar proyecto ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    let updated_at = Utc::now().to_rfc3339();
+    match conn.execute(
+        "UPDATE arcat_projects SET name = ?1, description = ?2, dg_code = ?3, uo_code = ?4, uo_address = ?5, status = ?6, tech_stack = ?7, updated_at = ?8 WHERE id = ?9",
+        params![
+            payload.name,
+            payload.description,
+            payload.dg_code,
+            payload.uo_code,
+            payload.uo_address,
+            payload.status,
+            payload.tech_stack,
+            updated_at,
+            project_id,
+        ],
+    ) {
+        Ok(0) => Json(json!({"status":"not_found","message":"Proyecto ARCAT no encontrado"})),
+        Ok(_) => {
+            let mut stmt = match conn.prepare(
+                "SELECT id, name, description, dg_code, uo_code, uo_address, status, tech_stack, created_at, updated_at FROM arcat_projects WHERE id = ?1"
+            ) {
+                Ok(stmt) => stmt,
+                Err(e) => {
+                    tracing::error!("Error preparando consulta tras actualizar proyecto ARCAT: {}", e);
+                    return Json(json!({"status":"error","message":"Error de base de datos"}));
+                }
+            };
+            match stmt.query_row([project_id], |row| project_from_row(row)) {
+                Ok(project) => Json(json!({"status":"ok","data": project})),
+                Err(e) => {
+                    tracing::error!("Error cargando proyecto ARCAT actualizado: {}", e);
+                    Json(json!({"status":"error","message":"Error de base de datos"}))
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Error actualizando proyecto ARCAT: {}", e);
+            Json(json!({"status":"error","message":"Error de base de datos"}))
+        }
+    }
+}
+
+async fn delete_project(
+    State(state): State<Arc<AppState>>,
+    Path(project_id): Path<String>,
+) -> Json<Value> {
+    let conn = match state.db_pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Error obteniendo conexión DB para borrar proyecto ARCAT: {}", e);
+            return Json(json!({"status":"error","message":"Error de base de datos"}));
+        }
+    };
+
+    match conn.execute("DELETE FROM arcat_projects WHERE id = ?1", [project_id]) {
+        Ok(0) => Json(json!({"status":"not_found","message":"Proyecto ARCAT no encontrado"})),
+        Ok(_) => Json(json!({"status":"ok","message":"Proyecto ARCAT eliminado"})),
+        Err(e) => {
+            tracing::error!("Error borrando proyecto ARCAT: {}", e);
+            Json(json!({"status":"error","message":"Error de base de datos"}))
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ManualAuditRequest {

@@ -28,6 +28,7 @@
           <button class="nav-btn" data-view="cve" id="nav-cve">CVE Lookup</button>
           <button class="nav-btn" data-view="audit" id="nav-audit">Audit Trail</button>
           <button class="nav-btn" data-view="arcat" id="nav-arcat">🏛️ ARCAT Blockchain</button>
+          <button class="nav-btn" data-view="blockchain-admin" id="nav-blockchain-admin">🧩 BLOCKCHAIN Admin</button>
           <button class="nav-btn" data-view="ioc" id="nav-ioc">🦠 IoC Intel</button>
           <button class="nav-btn" data-view="antivirus" id="nav-antivirus">🛡️ Antivirus</button>
           <button class="nav-btn" data-view="servicios" id="nav-servicios">⚙ Servicios</button>
@@ -580,6 +581,24 @@
               
               <div class="uo-detail-content" id="arcat-uo-content">
                 <p class="empty-state-detail">Selecciona un organismo en el árbol jerárquico para auditar sus dispositivos SBT y logs de trazabilidad.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── BLOCKCHAIN ADMIN VIEW ─────────────────────────────────────────── -->
+        <div class="view" id="view-blockchain-admin">
+          <div class="view-header">
+            <h1 class="view-title">🧩 BLOCKCHAIN Admin — Gestión de Proyectos</h1>
+            <div class="view-actions">
+              <button class="btn-secondary" id="btn-new-arcat-project">Nuevo proyecto</button>
+            </div>
+          </div>
+          <div class="card project-card" style="padding:1.25rem;">
+            <div class="project-list" id="arcat-projects-list">
+              <div class="empty-state">
+                <div class="empty-icon">🗂️</div>
+                <p>Cargando proyectos ARCAT...</p>
               </div>
             </div>
           </div>
