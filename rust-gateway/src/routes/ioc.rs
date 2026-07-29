@@ -148,14 +148,13 @@ async fn correlate_alerts(State(state): State<Arc<AppState>>) -> Json<Value> {
     info!("🦠 IoC correlate: cruzando alertas con MalwareBazaar");
 
     // ── Leer alertas desde SQLite ─────────────────────────────────────────────
-    let conn = match state.db_pool.get() {
-        Ok(c) => c,
-        Err(e) => return Json(json!({ "status": "error", "message": format!("DB: {}", e) })),
-    };
-
     let rows: Vec<(String, String)> = {
+        let conn = match state.db_pool.get() {
+            Ok(c) => c,
+            Err(e) => return Json(json!({ "status": "error", "message": format!("DB: {}", e) })),
+        };
         let mut stmt = match conn.prepare(
-            "SELECT id, data FROM alerts ORDER BY created_at DESC LIMIT 100"
+            "SELECT id, data FROM alerts ORDER BY created_at DESC LIMIT 1000"
         ) {
             Ok(s) => s,
             Err(e) => return Json(json!({ "status": "error", "message": format!("SQL prepare: {}", e) })),
@@ -191,6 +190,7 @@ async fn correlate_alerts(State(state): State<Arc<AppState>>) -> Json<Value> {
         ("rootkit",     "Rootkit",     88),
         ("botnet",      "Botnet",      82),
         ("webshell",    "WebShell",    85),
+        ("pioneer",     "Pioneer",     85),
     ];
 
     // Patrones encontrados: (tag, familia_printable, confianza, alert_ids)

@@ -49,8 +49,8 @@ pub struct Alert {
     /// ID original de Wazuh (si viene de allí)
     pub wazuh_id: Option<String>,
 
-    /// Timestamp del evento
-    pub timestamp: DateTime<Utc>,
+    /// Timestamp del evento (opcional para tolerar datos antiguos)
+    pub timestamp: Option<DateTime<Utc>>,
 
     /// Nivel de severidad
     pub severity: Severity,
@@ -111,7 +111,7 @@ impl Alert {
         Self {
             id: Uuid::new_v4().to_string(),
             wazuh_id: None,
-            timestamp: Utc::now(),
+            timestamp: Some(Utc::now()),
             severity,
             rule_level: None,
             rule_id: None,

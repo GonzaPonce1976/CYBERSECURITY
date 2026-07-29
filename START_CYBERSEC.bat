@@ -71,6 +71,7 @@ set "GATEWAY_DB=%GATEWAY_DIR%\gateway_data.db"
 set "BUILD_BAT=%GATEWAY_DIR%\build.bat"
 set "DEPLOY_JSON=%PROJECT_DIR%\deployments\localhost.json"
 set "SYNC_SCRIPT=%PROJECT_DIR%\sync_contracts.ps1"
+set "ANVIL_STATE_FILE=%PROJECT_DIR%\.anvil_state.json"
 
 cd /d "%PROJECT_DIR%"
 
@@ -231,7 +232,7 @@ if "!FORCE_HARDHAT!"=="1" (
 
 if "!USE_ANVIL!"=="1" (
     echo  Abriendo ventana de Anvil blockchain...
-    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id !CHAIN_ID!"
+    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id !CHAIN_ID! --state-file %ANVIL_STATE_FILE%"
 ) else (
     echo  Abriendo ventana de Hardhat blockchain...
     start "Hardhat Blockchain :!RPC_PORT!" cmd /k "title Hardhat Blockchain :!RPC_PORT! && cd /d "%PROJECT_DIR%" && npx hardhat node --hostname !RPC_HOST! --port !RPC_PORT! --config hardhat.config.cjs"

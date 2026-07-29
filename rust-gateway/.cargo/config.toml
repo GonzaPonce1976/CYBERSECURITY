@@ -5,6 +5,9 @@
 # Usar el linker MSVC si está disponible
 # Si no tienes VS Build Tools, instálalos desde:
 # https://visualstudio.microsoft.com/visual-cpp-build-tools/
+#
+# El proyecto también define un archivo rust-toolchain.toml en este directorio.
+# Ese archivo ancla el canal stable y el target x86_64-pc-windows-msvc.
 
 # Para desarrollo en Windows sin VS Build Tools, 
 # instala MinGW64 y descomenta la línea de abajo:

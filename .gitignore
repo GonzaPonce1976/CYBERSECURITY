@@ -192,6 +192,7 @@ cache/
 frontend/node_modules/
 frontend/.env
 .hardhat_db/
+.anvil_state.json
 
 # Rust gateway build and cache artifacts
 rust-gateway/target/

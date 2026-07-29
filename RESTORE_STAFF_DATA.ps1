@@ -22,7 +22,8 @@ param(
     [string]$GatewayUrl   = "http://127.0.0.1:8080",
     [switch]$SoloAntivirus,
     [switch]$SoloArcat,
-    [switch]$AutoArcat
+    [switch]$AutoArcat,
+    [switch]$NoAutoArcat
 )
 
 $ErrorActionPreference = "Continue"
@@ -109,6 +110,7 @@ if (-not $SoloAntivirus) {
             description   = "Nombre: $($d.ip) | Hostname: $($d.hostname) | UUID: $($d.uuid) | Tipo: $($d.tipo)"
             src_ip        = $d.ip
             agent_name    = $d.hostname
+            source_agent  = $d.hostname
             event_type    = "NEW_DEVICE_DETECTED"
             rule_level    = 3
             timestamp     = $ts
@@ -131,8 +133,9 @@ if (-not $SoloAntivirus) {
     Write-Host ""
     Write-Host "       Alertas NEW_DEVICE_DETECTED: $countOk ok, $countFail fallidas" -ForegroundColor $(if($countFail -gt 0){"Yellow"}else{"Green"})
     Write-Host ""
-    if ($AutoArcat) {
-        Write-Host "  [AUTO] Ejecutando restauracion ARCAT on-chain automática..." -ForegroundColor Yellow
+
+    if (-not $NoAutoArcat) {
+        Write-Host "  [AUTO] Intentando restaurar ARCAT on-chain..." -ForegroundColor Yellow
         Write-Host "         npm run restore:arcat:local" -ForegroundColor Gray
         try {
             npm run restore:arcat:local | Write-Host
@@ -148,8 +151,10 @@ if (-not $SoloAntivirus) {
         Write-Host "  4. Haz clic en 'Acunar Dispositivo (SBT)' y elige cada dispositivo" -ForegroundColor White
         Write-Host "  5. Repite para UO-ADM y UO-RHH" -ForegroundColor White
         Write-Host ""
-        Write-Host "  NOTA: Hardhat Node NO persiste estado entre reinicios del SO." -ForegroundColor DarkCyan
-        Write-Host "  Los SBT deben re-acunarse tras cada reinicio de Hardhat/Anvil." -ForegroundColor DarkCyan
+        Write-Host "  NOTA: Hardhat Node persiste estado solo si se inicia con --db ./.hardhat_db." -ForegroundColor DarkCyan
+        Write-Host "  Si usas Anvil, debe iniciarse con --state-file ./.anvil_state.json." -ForegroundColor DarkCyan
+        Write-Host "  Usa npm run dev:contracts:persist o START_CYBERSEC.bat actualizado." -ForegroundColor DarkCyan
+        Write-Host "  Si no, los SBT deben re-acunarse tras cada reinicio de Hardhat/Anvil." -ForegroundColor DarkCyan
     }
 }
 

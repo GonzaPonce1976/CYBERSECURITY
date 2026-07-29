@@ -81,7 +81,7 @@ console.log("\n╔════════════════════�
 console.log("║   Setup completado — Próximos pasos:             ║");
 console.log("╠══════════════════════════════════════════════════╣");
 console.log("║  1. Edita .env con tus API keys                  ║");
-console.log("║  2. npm run dev:contracts  → Hardhat local node  ║");
+console.log("║  2. npm run dev:contracts:persist  → Hardhat local node persistente  ║");
 console.log("║  3. npm run deploy:local   → Deploy contratos    ║");
 console.log("║  4. npm run dev:gateway    → Rust gateway        ║");
 console.log("║  5. npm run dev:frontend   → Dashboard UI        ║");

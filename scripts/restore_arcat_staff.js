@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import hre from "hardhat";
 import { getContract } from "viem";
 
@@ -88,6 +89,103 @@ function getUOAddress(deployments, uoCode) {
   return staffGroup[uoCode].address;
 }
 
+async function addressHasCode(publicClient, address) {
+  if (!address) return false;
+  try {
+    const code = await publicClient.getCode({ address });
+    return code && code !== "0x" && code !== "0x0";
+  } catch {
+    return false;
+  }
+}
+
+async function ensureArcatDeployment(deployments, publicClient) {
+  const rootAddr = deployments.contracts?.ArcatRoot;
+  const registryAddr = deployments.contracts?.ArcatRegistry;
+  if (!rootAddr || !registryAddr) {
+    return false;
+  }
+
+  if (!await addressHasCode(publicClient, rootAddr)) {
+    return false;
+  }
+
+  if (!await addressHasCode(publicClient, registryAddr)) {
+    return false;
+  }
+
+  const staffUOs = ["UO-ADM", "UO-RHH", "UO-TEC"];
+  for (const code of staffUOs) {
+    const uoAddr = deployments.contracts?.UnidadesOperativas?.STAFF?.[code]?.address;
+    if (!uoAddr || !await addressHasCode(publicClient, uoAddr)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function updateEnvFile(pathToFile, variables) {
+  let content = fs.existsSync(pathToFile) ? fs.readFileSync(pathToFile, "utf-8") : "";
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`^${key}=.*$`, "m");
+    const line = `${key}=${value}`;
+    if (regex.test(content)) {
+      content = content.replace(regex, line);
+    } else {
+      if (content.length > 0 && !content.endsWith("\n")) {
+        content += "\n";
+      }
+      content += `${line}\n`;
+    }
+  }
+  fs.writeFileSync(pathToFile, content, "utf-8");
+}
+
+function syncArcatEnv(deployments) {
+  const vars = {};
+  vars["CONTRACT_ARCAT_ROOT"] = deployments.contracts.ArcatRoot;
+  vars["CONTRACT_ARCAT_REGISTRY"] = deployments.contracts.ArcatRegistry;
+  vars["VITE_ARCAT_ROOT"] = deployments.contracts.ArcatRoot;
+  vars["VITE_ARCAT_REGISTRY"] = deployments.contracts.ArcatRegistry;
+
+  for (const [dgCode, info] of Object.entries(deployments.contracts.DireccionesGenerales || {})) {
+    const key = `CONTRACT_DG_${dgCode.replace(/-/g, "_")}`;
+    vars[key] = info.address;
+    vars[`VITE_${key}`] = info.address;
+  }
+
+  for (const [dgCode, uos] of Object.entries(deployments.contracts.UnidadesOperativas || {})) {
+    for (const [uoCode, info] of Object.entries(uos)) {
+      const key = `CONTRACT_${uoCode.replace(/-/g, "_")}`;
+      vars[key] = info.address;
+      vars[`VITE_${key}`] = info.address;
+    }
+  }
+
+  const envPath = path.resolve(".env");
+  const gatewayEnvPath = path.resolve("rust-gateway/.env");
+
+  updateEnvFile(envPath, vars);
+  console.log(`   ✅ Actualizado ${envPath} con direcciones ARCAT`);
+
+  if (fs.existsSync(gatewayEnvPath)) {
+    updateEnvFile(gatewayEnvPath, vars);
+    console.log(`   ✅ Actualizado ${gatewayEnvPath} con direcciones ARCAT`);
+  }
+}
+
+function redeployArcat() {
+  console.log("⚠️  No se encontró la red ARCAT local desplegada o su estado está perdido.");
+  console.log("   Iniciando redeploy de ARCAT en localhost...");
+  execSync("npx hardhat run scripts/deploy_arcat.js --network localhost --config hardhat.config.cjs", {
+    stdio: "inherit",
+  });
+  const deployments = JSON.parse(fs.readFileSync(ARCAT_DEPLOYMENTS_PATH, "utf-8"));
+  syncArcatEnv(deployments);
+  return deployments;
+}
+
 async function main() {
   console.log("╔════════════════════════════════════════════════════════════════╗");
   console.log("║   RESTORE_ARCAT_STAFF.js — Restauración on-chain de SBT STAFF  ║");
@@ -97,13 +195,18 @@ async function main() {
     throw new Error(`No se encontró ${ARCAT_DEPLOYMENTS_PATH}. Ejecuta primero npm run deploy:arcat:local`);
   }
 
-  const deployments = JSON.parse(fs.readFileSync(ARCAT_DEPLOYMENTS_PATH, "utf-8"));
+  let deployments = JSON.parse(fs.readFileSync(ARCAT_DEPLOYMENTS_PATH, "utf-8"));
+  const publicClient = await hre.viem.getPublicClient();
+
+  if (!await ensureArcatDeployment(deployments, publicClient)) {
+    deployments = redeployArcat();
+  }
+
   const registryAddress = deployments.contracts?.ArcatRegistry;
   if (!registryAddress) {
     throw new Error("El archivo de deploy no contiene ArcatRegistry. Verifica deployments/localhost_arcat.json");
   }
 
-  const publicClient = await hre.viem.getPublicClient();
   const [deployer] = await hre.viem.getWalletClients();
   const deployerAddress = deployer.account.address;
 

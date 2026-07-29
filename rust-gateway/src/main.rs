@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     // Configurar CORS para el frontend
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
         .allow_headers(Any);
 
     // Construir router con todas las rutas

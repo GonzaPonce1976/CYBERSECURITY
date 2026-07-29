@@ -253,6 +253,25 @@ function updateEnvArcat(output, network) {
     .join("\n");
   fs.writeFileSync(arcatEnvPath, arcatEnvContent);
   console.log(`   📝 Referencia guardada en: .env.arcat.${network}`);
+
+  // Sincronizar también el gateway Rust si existe.
+  const gatewayEnvPath = path.resolve("rust-gateway/.env");
+  if (fs.existsSync(gatewayEnvPath)) {
+    let gatewayContent = fs.readFileSync(gatewayEnvPath, "utf-8");
+
+    for (const [key, value] of Object.entries(vars)) {
+      const regex = new RegExp(`^${key}=.*$`, "m");
+      const line = `${key}=${value}`;
+      if (regex.test(gatewayContent)) {
+        gatewayContent = gatewayContent.replace(regex, line);
+      } else {
+        gatewayContent += `\n${line}`;
+      }
+    }
+
+    fs.writeFileSync(gatewayEnvPath, gatewayContent);
+    console.log(`   ✅ Archivo rust-gateway/.env sincronizado con direcciones ARCAT`);
+  }
 }
 
 main().catch((error) => {

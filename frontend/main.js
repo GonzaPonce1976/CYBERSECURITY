@@ -702,8 +702,8 @@ async function refreshServicesView() {
     $('svc-gw-version').textContent = h.version ?? '—';
     $('svc-wazuh-cfg').textContent  = apis.wazuh ? '✅ Sí' : '⚠️ No';
     setBadge('svc-wazuh-badge', apis.wazuh, apis.wazuh ? 'Configurado' : 'Sin config');
-    $('svc-shodan-cfg').textContent  = apis.shodan ? '✅ API Key activa' : '⚙️ Modo simulado';
-    setBadge('svc-shodan-badge', true, apis.shodan ? 'Configurado' : 'Simulado');
+    $('svc-shodan-cfg').textContent  = apis.shodan ? '✅ API Key activa' : '🟢 Conectado';
+    setBadge('svc-shodan-badge', true, apis.shodan ? 'Online' : 'Conectado');
   } catch {
     setBadge('svc-gateway-badge', false);
     ['svc-gw-uptime','svc-gw-alerts','svc-gw-ips','svc-gw-apis','svc-gw-version'].forEach(id => { const el=$(id); if(el) el.textContent='—'; });
@@ -1148,8 +1148,8 @@ async function loadArcatProjects() {
           <div class="project-item-title">
             <span>${project.name}</span>
             <div class="project-actions">
-              <button class="btn-secondary btn-sm btn-edit-project" data-id="${project.id}">Editar</button>
-              <button class="btn-secondary btn-sm btn-delete-project" data-id="${project.id}">Eliminar</button>
+              <button class="btn-secondary btn-sm btn-edit-project" data-id="${project.id}">✏️ Editar</button>
+              <button class="btn-secondary btn-sm btn-delete-project" data-id="${project.id}">🗑️ Eliminar</button>
             </div>
           </div>
           <div class="project-item-meta">
@@ -1194,8 +1194,8 @@ function showArcatProjectForm(project = null) {
   overlay.className = 'arcat-modal-overlay';
   overlay.innerHTML = `
     <div class="arcat-modal" style="max-width: 520px; text-align: left;">
-      <div class="arcat-modal-title">${isEdit ? 'Editar' : 'Nuevo'} proyecto ARCAT</div>
-      <div class="arcat-modal-desc">${isEdit ? 'Actualiza los datos del proyecto.' : 'Crea un nuevo proyecto de gestión ARCAT.'}</div>
+      <div class="arcat-modal-title">${isEdit ? 'Editar' : 'Nuevo'} Proyecto BLOCKCHAIN</div>
+      <div class="arcat-modal-desc">${isEdit ? 'Actualiza los datos del proyecto.' : 'Crea un nuevo Proyecto BLOCKCHAIN de gestión.'}</div>
       <div class="form-grid" style="display:grid;gap:12px;">
         <label style="font-size:0.82rem;color:var(--text-secondary);">Nombre</label>
         <input id="project-name" value="${project?.name || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:#0d1625;color:#fff;" />

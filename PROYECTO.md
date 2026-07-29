@@ -83,6 +83,12 @@ npm run deploy:arcat:local
 # Restaurar dispositivos ARCAT STAFF on-chain
 npm run restore:arcat:local
 
+# Levantar nodo local persistente
+npm run dev:contracts:persist
+
+# Si usas Anvil, asegúrate de arrancarlo con --state-file
+# para que el estado de blockchain sobreviva un reinicio.
+
 # Levantar el gateway Rust
 npm run dev:gateway
 

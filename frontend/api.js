@@ -60,6 +60,10 @@ export const api = {
   getArcatDeviceByUuid: (uuid) => request(`/api/arcat/device/uuid/${uuid}`),
   getArcatUnitAudits: (address) => request(`/api/arcat/unit/${address}/audits`),
   getArcatUnitDevices: (address) => request(`/api/arcat/unit/${address}/devices`),
+  getArcatProjects: () => request('/api/arcat/projects'),
+  createArcatProject: (payload) => request('/api/arcat/projects', { method: 'POST', body: JSON.stringify(payload) }),
+  updateArcatProject: (id, payload) => request(`/api/arcat/projects/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteArcatProject: (id) => request(`/api/arcat/projects/${id}`, { method: 'DELETE' }),
   logArcatAudit: (payload) => request('/api/arcat/audit', { method: 'POST', body: JSON.stringify(payload) }),
 
   BASE: GATEWAY,

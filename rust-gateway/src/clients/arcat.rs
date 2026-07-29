@@ -457,6 +457,17 @@ impl ArcatClient {
         })
     }
 
+    /// Obtiene el número total de dispositivos registrados en una Unidad Operativa.
+    pub async fn get_device_count(&self, uo_contract: &str) -> Result<u64> {
+        let provider = self.read_provider()?;
+        let addr: Address = uo_contract.parse()
+            .map_err(|e| anyhow!("UO contract address inválida: {}", e))?;
+        let contract = UnidadOperativaSBT::new(addr, provider);
+        let count = contract.getDevicesCount().call().await
+            .map_err(|e| anyhow!("getDevicesCount error: {}", e))?;
+        Ok(count.to::<u64>())
+    }
+
     /// Obtiene las últimas N auditorías de un dispositivo
     pub async fn get_latest_audits(
         &self,

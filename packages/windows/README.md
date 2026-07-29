@@ -36,6 +36,8 @@ cd rust-gateway
 cargo build --release
 ```
 
+> Nota: El proyecto incluye un archivo `rust-toolchain.toml` en `rust-gateway/` que fija el canal `stable` y el target `x86_64-pc-windows-msvc`. Asegúrate de tener instalado el componente de toolchain MSVC y Visual Studio Build Tools para compilar correctamente en Windows.
+
 ### 2. Generar el MSI
 
 ```powershell
