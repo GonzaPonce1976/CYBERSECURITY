@@ -2024,3 +2024,89 @@ tr:last-child td { border-bottom: none; }
   transform: translateY(-1px);
 }
 
+/* ── Estilos para Botones Secundarios Globales ── */
+.btn-secondary {
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--cyan);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+  backdrop-filter: blur(6px);
+}
+
+.btn-secondary:hover {
+  background: var(--cyan-dim);
+  border-color: var(--cyan);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.25);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 12px;
+  height: auto;
+}
+
+/* ── Botón Estilo CyberSec / Web3: Actualizar Auditorías ── */
+.audit-reload-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.btn-reload-audits {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.12) 0%, rgba(124, 58, 237, 0.2) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  color: #00d4ff;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 7px 15px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.btn-reload-audits .refresh-icon {
+  font-size: 0.85rem;
+  display: inline-block;
+  transition: transform 0.4s ease;
+}
+
+.btn-reload-audits:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.25) 0%, rgba(124, 58, 237, 0.38) 100%);
+  border-color: var(--cyan);
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 212, 255, 0.35), inset 0 0 10px rgba(0, 212, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.btn-reload-audits:hover .refresh-icon {
+  transform: rotate(180deg);
+}
+
+.btn-reload-audits:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
+}
+
+

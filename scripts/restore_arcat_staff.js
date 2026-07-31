@@ -226,14 +226,14 @@ async function main() {
 
       console.log(`➡️  Restaurando dispositivo ${device.hostname} en ${device.uoCode}...`);
 
-      const tx = await uoContract.write.registerDevice([
+      const hash1 = await uoContract.write.registerDevice([
         deployerAddress,
         device.deviceName,
         device.uuid,
         device.hostname,
         device.tipo,
       ]);
-      await tx.wait();
+      await publicClient.waitForTransactionReceipt({ hash: hash1 });
 
       const lookup = await uoContract.read.getTokenByHostname([device.hostname]);
       const tokenId = lookup[0];
@@ -244,7 +244,7 @@ async function main() {
 
       console.log(`   ✅ Dispositivo acuñado en UO ${device.uoCode} tokenId=${tokenId}`);
 
-      const tx2 = await registryContract.write.adminIndexDevice([
+      const hash2 = await registryContract.write.adminIndexDevice([
         uoAddress,
         tokenId,
         device.hostname,
@@ -252,7 +252,7 @@ async function main() {
         device.dgCode,
         device.uoCode,
       ]);
-      await tx2.wait();
+      await publicClient.waitForTransactionReceipt({ hash: hash2 });
 
       console.log(`   ✅ Indexado en ArcatRegistry (${registryAddress})\n`);
       succeeded += 1;

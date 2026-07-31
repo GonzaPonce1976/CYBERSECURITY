@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
-title CyberSecurity DApp -- Detener Stack v0.3.0
+title CyberSecurity DApp -- Detener Stack v0.4.0
 color 0C
 setlocal EnableDelayedExpansion
 
 REM Cargar y parsear ETH_RPC_URL desde .env
 set "ETH_RPC_URL=http://127.0.0.1:8545"
 if exist ".env" (
-    for /f "usebackq tokens=1,2 delims==" %%i in (".env") do (
+    for /f "usebackq tokens=1,2 delims===" %%i in (".env") do (
         if "%%i"=="ETH_RPC_URL" set "ETH_RPC_URL=%%j"
     )
 )
@@ -25,10 +25,28 @@ if "!RPC_PORT!"=="" set "RPC_PORT=8545"
 echo.
 echo  +==============================================================+
 echo  ^|       CyberSecurity DApp -- Detener todos los servicios      ^|
-echo  ^|                      Version 0.3.0                           ^|
+echo  ^|                      Version 0.4.0                           ^|
 echo  +==============================================================+
 echo.
 echo  Deteniendo el stack de CyberSec DApp...
+echo.
+
+REM ── [v0.4.0] AUTO-BACKUP antes de detener (nodo aun activo) ──────────────
+echo  +--------------------------------------------------------------+
+echo  ^|  AUTO-BACKUP: Guardando estado Anvil ANTES de detener        ^|
+echo  +--------------------------------------------------------------+
+if exist ".anvil_state.json" (
+    echo  Realizando backup de .anvil_state.json...
+    powershell -ExecutionPolicy Bypass -NonInteractive -File "%~dp0BACKUP_ANVIL.ps1" -Trigger "STOP_CYBERSEC"
+    if !errorlevel!==0 (
+        echo  [OK] Backup completado antes de detener el stack.
+    ) else (
+        echo  [WARN] Backup retorno codigo !errorlevel! - verifica BACKUP_ANVIL.ps1
+    )
+) else (
+    echo  [INFO] .anvil_state.json no encontrado - omitiendo backup.
+    echo         Ejecuta SETUP_ANVIL_STATE.bat para activar persistencia.
+)
 echo.
 
 REM ── Detener Gateway por nombre de proceso (v0.3.0: binario directo) ─

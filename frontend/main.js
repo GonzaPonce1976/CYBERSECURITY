@@ -1503,9 +1503,10 @@ async function loadDeviceAudits(uoAddress, tokenId, hostname, deviceMeta = {}) {
 
     // ── Botón de recarga ──
     const reloadBtnHtml = `
-      <div style="display:flex; justify-content:flex-end; margin-bottom:0.5rem;">
-        <button id="btn-reload-audits" class="btn-secondary btn-sm" style="font-size:0.72rem; padding:4px 10px; display:flex; align-items:center; gap:6px;">
-          🔄 Actualizar Auditorías
+      <div class="audit-reload-container">
+        <button id="btn-reload-audits" class="btn-reload-audits" title="Actualizar auditorías del dispositivo">
+          <span class="refresh-icon">🔄</span>
+          <span>Actualizar Auditorías</span>
         </button>
       </div>`;
 

@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title CyberSecurity DApp - Iniciador de Stack v0.3.0
+title CyberSecurity DApp - Iniciador de Stack v0.4.0
 color 0A
 setlocal EnableDelayedExpansion
 
@@ -21,11 +21,18 @@ REM              [+] Ruta /api/ip/exposures Shodan perimetral corregida
 REM              [+] Datos simulados Shodan cuando la BD esta vacia
 REM              [+] Panel Servicios: Shodan muestra modo correcto
 REM              [+] load_persistent_data tolerante a esquema antiguo
+REM    v0.4.0  2026-07-31 - Persistencia real de SBT con Anvil state-file:
+REM              [+] Deploy CONDICIONAL: skip si contratos ya activos
+REM              [+] check_contracts_alive.js verifica bytecode on-chain
+REM              [+] SBT sobreviven al reinicio del SO sin re-acunar
+REM              [+] RESTORE_STAFF_DATA restaura Gateway (off-chain)
+REM              [+] SETUP_ANVIL_STATE.bat para configuracion inicial
 REM
 REM  USO:
 REM    START_CYBERSEC.bat             -> Arranque normal
 REM    START_CYBERSEC.bat --clean-db  -> Limpia DB gateway antes de arrancar
 REM    START_CYBERSEC.bat --rebuild   -> Recompila gateway antes de arrancar
+REM    START_CYBERSEC.bat --force-deploy -> Fuerza redeploy aunque haya estado
 REM =================================================================
 
 echo.
@@ -44,18 +51,21 @@ set "CLEAN_DB=0"
 set "FORCE_REBUILD=0"
 set "FORCE_HARDHAT=0"
 set "FORCE_ANVIL=0"
+set "FORCE_DEPLOY=0"
 
 for %%A in (%*) do (
-    if /i "%%A"=="--clean-db" set "CLEAN_DB=1"
-    if /i "%%A"=="--rebuild"  set "FORCE_REBUILD=1"
-    if /i "%%A"=="--hardhat"  set "FORCE_HARDHAT=1"
-    if /i "%%A"=="--anvil"    set "FORCE_ANVIL=1"
+    if /i "%%A"=="--clean-db"     set "CLEAN_DB=1"
+    if /i "%%A"=="--rebuild"       set "FORCE_REBUILD=1"
+    if /i "%%A"=="--hardhat"       set "FORCE_HARDHAT=1"
+    if /i "%%A"=="--anvil"         set "FORCE_ANVIL=1"
+    if /i "%%A"=="--force-deploy"  set "FORCE_DEPLOY=1"
 )
 
-if "!CLEAN_DB!"=="1"      echo  [FLAG] --clean-db  activado: gateway_data.db sera reiniciada
-if "!FORCE_REBUILD!"=="1" echo  [FLAG] --rebuild   activado: gateway sera recompilado
-if "!FORCE_HARDHAT!"=="1" echo  [FLAG] --hardhat   activado: forzando uso de Hardhat Node
-if "!FORCE_ANVIL!"=="1"   echo  [FLAG] --anvil     activado: forzando uso de Anvil Node
+if "!CLEAN_DB!"=="1"      echo  [FLAG] --clean-db     activado: gateway_data.db sera reiniciada
+if "!FORCE_REBUILD!"=="1" echo  [FLAG] --rebuild       activado: gateway sera recompilado
+if "!FORCE_HARDHAT!"=="1" echo  [FLAG] --hardhat       activado: forzando uso de Hardhat Node
+if "!FORCE_ANVIL!"=="1"   echo  [FLAG] --anvil         activado: forzando uso de Anvil Node
+if "!FORCE_DEPLOY!"=="1"  echo  [FLAG] --force-deploy  activado: redeploy forzado aunque haya estado Anvil
 echo.
 
 REM ----------------------------------------------------------------
@@ -232,7 +242,7 @@ if "!FORCE_HARDHAT!"=="1" (
 
 if "!USE_ANVIL!"=="1" (
     echo  Abriendo ventana de Anvil blockchain...
-    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id !CHAIN_ID! --state-file %ANVIL_STATE_FILE%"
+    start "Anvil Blockchain :!RPC_PORT!" cmd /k "title Anvil Blockchain :!RPC_PORT! && anvil --host !RPC_HOST! --port !RPC_PORT! --chain-id !CHAIN_ID! --state "%ANVIL_STATE_FILE%""
 ) else (
     echo  Abriendo ventana de Hardhat blockchain...
     start "Hardhat Blockchain :!RPC_PORT!" cmd /k "title Hardhat Blockchain :!RPC_PORT! && cd /d "%PROJECT_DIR%" && npx hardhat node --hostname !RPC_HOST! --port !RPC_PORT! --config hardhat.config.cjs"
@@ -255,6 +265,40 @@ if "!USE_ANVIL!"=="1" (
 
 :SKIP_BLOCKCHAIN
 
+REM =================================================================
+REM  v0.4.0: Verificacion inteligente — deploy CONDICIONAL
+REM  Si .anvil_state.json existe Y los contratos estan activos on-chain,
+REM  se saltan los PASOS 5, 6 y 7 (no se re-despliega nada).
+REM  Esto preserva los SBT ya acunados entre reinicios del SO.
+REM =================================================================
+echo.
+echo  +-----------------------------------------------------------------+
+echo  ^|  PASO 4.5 [v0.4.0]: Verificando persistencia de contratos      ^|
+echo  +-----------------------------------------------------------------+
+echo.
+
+set "CONTRACTS_ALIVE=0"
+if "!FORCE_DEPLOY!"=="1" (
+    echo  [FLAG] --force-deploy activo - omitiendo verificacion, redeploy forzado.
+    goto :DO_DEPLOY
+)
+
+if exist "%ANVIL_STATE_FILE%" (
+    echo  [v0.4.0] .anvil_state.json detectado - verificando contratos on-chain...
+    node scripts/check_contracts_alive.js
+    if !errorlevel!==0 (
+        set "CONTRACTS_ALIVE=1"
+        echo  [v0.4.0] Contratos ACTIVOS - saltando PASOS 5, 6 y 7.
+        goto :SKIP_DEPLOY
+    ) else (
+        echo  [v0.4.0] Contratos INACTIVOS o estado corrompido - ejecutando deploy completo.
+    )
+) else (
+    echo  [v0.4.0] Sin .anvil_state.json - primera vez o estado perdido.
+    echo         Ejecuta SETUP_ANVIL_STATE.bat para configuracion inicial con persistencia.
+)
+
+:DO_DEPLOY
 REM =================================================================
 echo.
 echo  +-----------------------------------------------------------------+
@@ -299,6 +343,24 @@ if not exist "%DEPLOY_JSON%" (
 )
 echo.
 echo  [OK] Todos los Smart Contracts desplegados exitosamente.
+goto :AFTER_DEPLOY
+
+:SKIP_DEPLOY
+REM ── Rama de restauracion: contratos ya activos on-chain ─────────────
+echo.
+echo  +-----------------------------------------------------------------+
+echo  ^|  PASO 5-6-7 SALTADOS [v0.4.0]: Estado Anvil restaurado OK      ^|
+echo  +-----------------------------------------------------------------+
+echo.
+echo  [v0.4.0] Los SBT ya acunados siguen activos en blockchain.
+echo  [v0.4.0] Restaurando solo datos off-chain del Gateway...
+echo.
+powershell -ExecutionPolicy Bypass -Command "& '%PROJECT_DIR%\RESTORE_STAFF_DATA.ps1' -SoloAntivirus -NoAutoArcat"
+echo.
+echo  [v0.4.0] Restauracion off-chain completada. Continuando arranque...
+goto :SETUP_GW_ENV
+
+:AFTER_DEPLOY
 
 REM =================================================================
 echo.
@@ -313,7 +375,8 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
-REM Leer las addresses sincronizadas desde .env
+:SETUP_GW_ENV
+REM Leer las addresses desde .env (tanto en deploy nuevo como en restauracion)
 set "ADDR_SECURITY="
 set "ADDR_REGISTRY="
 set "ADDR_ARCAT_ROOT="
@@ -326,7 +389,7 @@ for /f "usebackq tokens=1,2 delims==" %%i in ("%PROJECT_DIR%\.env") do (
 )
 
 echo.
-echo  [OK] Direcciones sincronizadas:
+echo  [OK] Direcciones cargadas:
 echo       SecurityAudit  : !ADDR_SECURITY!
 echo       AlertRegistry  : !ADDR_REGISTRY!
 echo       ArcatRoot      : !ADDR_ARCAT_ROOT!
@@ -335,12 +398,12 @@ echo       ArcatRegistry  : !ADDR_ARCAT_REGISTRY!
 REM =================================================================
 echo.
 echo  +-----------------------------------------------------------------+
-echo  ^|  PASO 7.5: Verificación Sistemática del Nodo Blockchain         ^|
+echo  ^|  PASO 7.5: Verificacion Sistematica del Nodo Blockchain         ^|
 echo  +-----------------------------------------------------------------+
 echo.
 node scripts/verify-anvil.js
 if !errorlevel! neq 0 (
-    echo  [AVISO] La verificación sistemática de blockchain falló o advirtió un problema.
+    echo  [AVISO] La verificacion sistematica de blockchain fallo o advirtio un problema.
 )
 
 REM =================================================================
@@ -528,7 +591,7 @@ REM =================================================================
 echo.
 echo  ================================================================
 echo.
-echo    CYBERSECURITY DAPP v0.3.0 -- STACK INICIADO
+echo    CYBERSECURITY DAPP v0.4.0 -- STACK INICIADO
 echo.
 echo    BLOCKCHAIN
 if defined ADDR_SECURITY (
@@ -552,12 +615,15 @@ echo    SHODAN.IO MONITOR
 echo      Estado         : !SHODAN_MODE!
 echo      Para API real  : agregar SHODAN_API_KEY en rust-gateway\.env
 echo.
-echo    MEJORAS v0.3.0 ACTIVAS
+echo    MEJORAS v0.4.0 ACTIVAS
 echo      [+] Gateway binary-first  (arranque en ~2s vs ~2min)
 echo      [+] DB tolerante a esquema desactualizado (no mas crashes)
 echo      [+] Ruta /api/ip/exposures corregida (sin conflicto Axum)
 echo      [+] Datos simulados Shodan cuando la BD esta vacia
 echo      [+] Panel Servicios: badge Shodan siempre activo
+echo      [+] Persistencia real SBT: Anvil --state-file (v0.4.0)
+echo      [+] Deploy condicional: no re-despliega si estado OK
+echo      [+] SETUP_ANVIL_STATE.bat para configuracion inicial
 echo.
 echo    COMANDOS UTILES
 echo      Parar stack    : STOP_CYBERSEC.bat
