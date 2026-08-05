@@ -45,6 +45,38 @@
         </div>
       </header>
 
+      <!-- ── 1-MINUTE INTERACTIVE DEMO BANNER ── -->
+      <div id="demo-tour-banner" class="demo-tour-banner">
+        <div class="demo-tour-container">
+          <div class="demo-tour-badge">
+            <span class="demo-pulse"></span>
+            <span class="demo-badge-text">🚀 DEMO INTERACTIVA (60s)</span>
+          </div>
+          
+          <div class="demo-tour-info">
+            <span id="demo-tour-step-text" class="demo-step-text">Explora el sistema completo de Ciberseguridad en menos de 1 minuto</span>
+          </div>
+
+          <div class="demo-tour-controls">
+            <div class="demo-timer" id="demo-timer" title="Tiempo de interacción remaining">⏱️ <span id="demo-timer-val">01:00</span></div>
+            <button id="btn-start-demo-tour" class="btn-demo-action primary">
+              <span>🎮</span> <span id="demo-btn-label">Iniciar Tour (60s)</span>
+            </button>
+            <button id="btn-next-demo-step" class="btn-demo-action secondary" style="display:none;">
+              <span>Siguiente ➔</span>
+            </button>
+            <button id="btn-stop-demo-tour" class="btn-demo-action cancel" style="display:none;">
+              <span>✕ Salir</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="demo-progress-track">
+          <div id="demo-progress-bar" class="demo-progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
       <!-- MAIN CONTENT -->
       <main class="main-content" id="main-content">
 

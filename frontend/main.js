@@ -70,8 +70,8 @@ function startDemoAlerts() {
     if (state.alerts.length > 50) state.alerts.pop();
     renderDashboard();
     renderAlertsTable();
-    toast(`Nueva alerta demo: ${newAlert.description}`, 'info', 2500);
-  }, 12000);
+    toast(`🚨 Alerta en tiempo real: ${newAlert.description}`, 'info', 2200);
+  }, 2500);
 }
 
 function stopDemoAlerts() {
@@ -225,6 +225,11 @@ async function loadAlerts() {
     renderDashboard();
     renderAlertsTable();
     startDemoAlerts();
+    setTimeout(() => {
+      if (typeof window.start1MinDemoTour === 'function') {
+        window.start1MinDemoTour();
+      }
+    }, 600);
   }
 }
 
@@ -2560,5 +2565,186 @@ setInterval(() => {
     loadAntivirusView();
   }
 }, 60_000);
+
+// ── 1-MINUTE INTERACTIVE DEMO ENGINE ─────────────────────────
+const demoTourState = {
+  isRunning: false,
+  currentStep: 0,
+  secondsRemaining: 60,
+  timerInterval: null,
+  stepTimeout: null,
+};
+
+const DEMO_TOUR_STEPS = [
+  {
+    step: 1,
+    title: '🚨 Paso 1/4: Monitoreo de Amenazas Críticas en Tiempo Real',
+    view: 'dashboard',
+    durationSec: 15,
+    action: () => {
+      toast('🚨 [PASO 1] Detección de ciberataques en vivo', 'error', 4000);
+      if (typeof generateDemoAlerts === 'function') {
+        state.alerts = generateDemoAlerts();
+        renderDashboard();
+        renderAlertsTable();
+      }
+    }
+  },
+  {
+    step: 2,
+    title: '🌐 Paso 2/4: Auditoría & Análisis de Reputación IP Atacante',
+    view: 'ip',
+    durationSec: 15,
+    action: () => {
+      toast('🌐 [PASO 2] Analizando IP 185.220.101.5 (Nodo de Salida TOR)', 'info', 4000);
+      const ipInput = document.getElementById('ip-input');
+      if (ipInput) {
+        ipInput.value = '185.220.101.5';
+        const btnCheck = document.getElementById('btn-check-ip');
+        if (btnCheck) btnCheck.click();
+      }
+    }
+  },
+  {
+    step: 3,
+    title: '⛓️ Paso 3/4: Auditoría Inmutable en ARCAT Blockchain (ERC-1155)',
+    view: 'arcat',
+    durationSec: 15,
+    action: () => {
+      toast('⛓️ [PASO 3] Verificando evidencias de seguridad en Smart Contract', 'success', 4000);
+      if (typeof loadArcatOverview === 'function') {
+        loadArcatOverview();
+      }
+    }
+  },
+  {
+    step: 4,
+    title: '🛡️ Paso 4/4: Mitigación Antivirus Endpoint & Cierre de Incidente',
+    view: 'antivirus',
+    durationSec: 15,
+    action: () => {
+      toast('🛡️ [PASO 4] Aislamiento de amenaza en Endpoint y reporte generado', 'success', 4000);
+      if (typeof loadAntivirusView === 'function') {
+        loadAntivirusView();
+      }
+    }
+  }
+];
+
+function switchViewByName(viewName) {
+  const btn = document.querySelector(`.nav-btn[data-view="${viewName}"]`);
+  if (btn) btn.click();
+}
+
+function updateDemoTimerUI() {
+  const timerVal = document.getElementById('demo-timer-val');
+  const progressBar = document.getElementById('demo-progress-bar');
+  if (timerVal) {
+    const sec = demoTourState.secondsRemaining;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    timerVal.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  if (progressBar) {
+    const percent = Math.min(100, Math.max(0, ((60 - demoTourState.secondsRemaining) / 60) * 100));
+    progressBar.style.width = `${percent}%`;
+  }
+}
+
+window.start1MinDemoTour = function() {
+  if (demoTourState.isRunning) return;
+  demoTourState.isRunning = true;
+  demoTourState.currentStep = 0;
+  demoTourState.secondsRemaining = 60;
+
+  const btnStart = document.getElementById('btn-start-demo-tour');
+  const btnNext = document.getElementById('btn-next-demo-step');
+  const btnStop = document.getElementById('btn-stop-demo-tour');
+  if (btnStart) btnStart.style.display = 'none';
+  if (btnNext) btnNext.style.display = 'inline-flex';
+  if (btnStop) btnStop.style.display = 'inline-flex';
+
+  toast('🚀 Tour Interactivo de 60 Segundos Iniciado', 'info', 3000);
+
+  demoTourState.timerInterval = setInterval(() => {
+    if (demoTourState.secondsRemaining > 0) {
+      demoTourState.secondsRemaining--;
+      updateDemoTimerUI();
+    } else {
+      window.stop1MinDemoTour(true);
+    }
+  }, 1000);
+
+  executeDemoStep(0);
+};
+
+function executeDemoStep(stepIndex) {
+  if (!demoTourState.isRunning || stepIndex >= DEMO_TOUR_STEPS.length) {
+    if (stepIndex >= DEMO_TOUR_STEPS.length) window.stop1MinDemoTour(true);
+    return;
+  }
+
+  demoTourState.currentStep = stepIndex;
+  const stepObj = DEMO_TOUR_STEPS[stepIndex];
+  
+  const stepText = document.getElementById('demo-tour-step-text');
+  if (stepText) stepText.textContent = stepObj.title;
+
+  switchViewByName(stepObj.view);
+  try {
+    stepObj.action();
+  } catch (err) {
+    console.warn('Error en paso demo:', err);
+  }
+
+  clearTimeout(demoTourState.stepTimeout);
+  demoTourState.stepTimeout = setTimeout(() => {
+    if (demoTourState.isRunning) {
+      executeDemoStep(stepIndex + 1);
+    }
+  }, stepObj.durationSec * 1000);
+}
+
+window.nextDemoStep = function() {
+  if (!demoTourState.isRunning) return;
+  clearTimeout(demoTourState.stepTimeout);
+  executeDemoStep(demoTourState.currentStep + 1);
+};
+
+window.stop1MinDemoTour = function(completed = false) {
+  demoTourState.isRunning = false;
+  clearInterval(demoTourState.timerInterval);
+  clearTimeout(demoTourState.stepTimeout);
+
+  const btnStart = document.getElementById('btn-start-demo-tour');
+  const btnNext = document.getElementById('btn-next-demo-step');
+  const btnStop = document.getElementById('btn-stop-demo-tour');
+  const stepText = document.getElementById('demo-tour-step-text');
+  const progressBar = document.getElementById('demo-progress-bar');
+  const timerVal = document.getElementById('demo-timer-val');
+
+  if (btnStart) btnStart.style.display = 'inline-flex';
+  if (btnNext) btnNext.style.display = 'none';
+  if (btnStop) btnStop.style.display = 'none';
+
+  if (timerVal) timerVal.textContent = '01:00';
+  if (progressBar) progressBar.style.width = completed ? '100%' : '0%';
+
+  if (stepText) {
+    stepText.textContent = completed
+      ? '🎉 ¡Tour de 1 minuto completado con éxito! Puedes seguir explorando libremente.'
+      : 'Explora el sistema completo de Ciberseguridad en menos de 1 minuto';
+  }
+
+  if (completed) {
+    toast('🎉 ¡Demo de Ciberseguridad completada! Todos los módulos fueron verificados.', 'success', 5000);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-start-demo-tour')?.addEventListener('click', () => window.start1MinDemoTour());
+  document.getElementById('btn-next-demo-step')?.addEventListener('click', () => window.nextDemoStep());
+  document.getElementById('btn-stop-demo-tour')?.addEventListener('click', () => window.stop1MinDemoTour());
+});
 
 
