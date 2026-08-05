@@ -1,0 +1,10 @@
+node_modules
+.venv
+rust-gateway/target
+dist
+cache
+artifacts
+backups
+.git
+.anvil_state.json
+gateway_data.db
