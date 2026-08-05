@@ -2741,10 +2741,16 @@ window.stop1MinDemoTour = function(completed = false) {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+function initDemoTourListeners() {
   document.getElementById('btn-start-demo-tour')?.addEventListener('click', () => window.start1MinDemoTour());
   document.getElementById('btn-next-demo-step')?.addEventListener('click', () => window.nextDemoStep());
   document.getElementById('btn-stop-demo-tour')?.addEventListener('click', () => window.stop1MinDemoTour());
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDemoTourListeners);
+} else {
+  initDemoTourListeners();
+}
 
 
